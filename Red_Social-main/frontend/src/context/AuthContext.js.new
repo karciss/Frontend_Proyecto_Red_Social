@@ -1,0 +1,51 @@
+import React, { createContext, useState, useEffect, useContext } from 'react';
+
+const AuthContext = createContext();
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Simplificamos la autenticación para depuración
+  useEffect(() => {
+    // Verificar si hay un usuario guardado en localStorage
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error('Error parsing saved user', e);
+        localStorage.removeItem('user');
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  // Función simplificada para el login
+  const login = (userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
+  // Función simplificada para el logout
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+  };
+
+  const value = {
+    user,
+    loading,
+    error,
+    login,
+    logout,
+    isLoading: loading
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};

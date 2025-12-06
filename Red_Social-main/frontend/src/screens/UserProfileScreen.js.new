@@ -1,0 +1,17 @@
+import React from 'react';
+import UserProfileModule from '../components/UserProfileModule';
+import '../styles.css';
+import '../styles/UserProfile.css';
+
+/**
+ * Pantalla de perfil de usuario que muestra el módulo de perfil de usuario
+ */
+const UserProfileScreen = () => {
+  return (
+    <div className="user-profile-screen-container" style={{ padding: '20px' }}>
+      <UserProfileModule />
+    </div>
+  );
+};
+
+export default UserProfileScreen;

@@ -1,0 +1,467 @@
+/* Estilos para el módulo académico */
+
+.academic-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.academic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+}
+
+.academic-title {
+  font-size: 24px;
+  color: #fff;
+  margin: 0;
+}
+
+.academic-search {
+  position: relative;
+  width: 300px;
+}
+
+.academic-search input {
+  width: 100%;
+  padding: 10px 15px 10px 40px;
+  border-radius: 20px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.academic-search .search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.academic-tabs {
+  display: flex;
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.academic-tab {
+  padding: 12px 20px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 2px solid transparent;
+  margin-right: 10px;
+}
+
+.academic-tab:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.academic-tab.active {
+  color: #fff;
+  border-bottom: 2px solid #fff;
+}
+
+.academic-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.academic-main {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 20px;
+}
+
+.academic-detail {
+  width: 380px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Tarjetas de cursos */
+.academic-courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.course-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.course-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.course-card.selected {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.course-code {
+  font-weight: bold;
+  font-size: 16px;
+  color: #fff;
+  margin-bottom: 5px;
+}
+
+.course-group {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.course-name {
+  font-size: 20px;
+  color: #fff;
+  margin: 5px 0 15px 0;
+  line-height: 1.3;
+}
+
+.course-professor {
+  display: flex;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.course-professor .label {
+  color: rgba(255, 255, 255, 0.6);
+  margin-right: 5px;
+}
+
+.course-professor .value {
+  color: #fff;
+  font-weight: 500;
+}
+
+.course-schedule {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.course-schedule .day {
+  font-weight: bold;
+  color: #fff;
+}
+
+.course-schedule .time {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.course-schedule .room {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.course-schedule .more {
+  grid-column: 1 / -1;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  text-align: center;
+  margin-top: 5px;
+}
+
+.course-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.course-footer .average {
+  font-weight: bold;
+  color: #fff;
+}
+
+.course-footer .semester {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+}
+
+/* Detalles del curso */
+.course-detail {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.course-detail-header {
+  margin-bottom: 20px;
+}
+
+.course-detail-name {
+  font-size: 28px;
+  color: #fff;
+  margin: 0 0 5px 0;
+}
+
+.course-detail-meta {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 16px;
+}
+
+.course-detail-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.course-detail-section {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 18px;
+  color: #fff;
+  margin-bottom: 15px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.schedule-day {
+  font-weight: bold;
+  color: #fff;
+  width: 80px;
+}
+
+.schedule-time {
+  color: rgba(255, 255, 255, 0.8);
+  flex: 1;
+}
+
+.schedule-room {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.grades-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.grades-header {
+  display: flex;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 5px;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.grade-item {
+  display: flex;
+  padding: 8px 5px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  align-items: center;
+}
+
+.grade-item:nth-child(odd) {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.col, .grade-name {
+  flex: 2;
+}
+
+.col:nth-child(2), .grade-score {
+  flex: 1;
+  text-align: center;
+  font-weight: bold;
+}
+
+.col:nth-child(3), .grade-date {
+  flex: 1;
+  text-align: right;
+}
+
+.no-selection-message {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 16px;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Vista de calificaciones */
+.grades-view {
+  padding: 10px;
+}
+
+.grades-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.course-grades-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.course-grades-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.course-grades-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+}
+
+.grade-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.grade-name {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.grade-score {
+  font-weight: bold;
+  color: #fff;
+}
+
+.course-average {
+  margin-top: 15px;
+  text-align: right;
+  font-weight: bold;
+  font-size: 16px;
+  color: #fff;
+}
+
+/* Vista de horario */
+.schedule-view {
+  padding: 10px;
+}
+
+.weekly-schedule {
+  display: flex;
+  gap: 15px;
+  overflow-x: auto;
+  padding-bottom: 15px;
+}
+
+.day-column {
+  min-width: 240px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.day-header {
+  background: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-weight: bold;
+  padding: 10px 15px;
+  text-align: center;
+}
+
+.day-slots {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-height: 200px;
+}
+
+.schedule-slot {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.slot-time {
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 5px;
+}
+
+.slot-course {
+  color: #fff;
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+
+.slot-room {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.slot-professor {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+}
+
+.empty-day {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+}
