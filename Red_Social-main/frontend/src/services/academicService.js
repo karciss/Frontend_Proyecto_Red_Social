@@ -306,22 +306,6 @@ const academicService = {
   // ============= FUNCIONES DE GESTIÓN DE NOTAS =============
 
   /**
-   * Obtener todas las notas (admin/docente)
-   */
-  getNotas: async () => {
-    try {
-      const response = await apiService.get('/notas');
-      return { data: response.data, error: null };
-    } catch (error) {
-      console.error('Error obteniendo notas:', error);
-      return {
-        data: null,
-        error: error.response?.data?.detail || error.message
-      };
-    }
-  },
-
-  /**
    * Crear una nueva nota (admin/docente)
    */
   createNota: async (notaData) => {

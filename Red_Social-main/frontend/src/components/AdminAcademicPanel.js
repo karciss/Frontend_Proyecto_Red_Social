@@ -101,7 +101,6 @@ export default function AdminAcademicPanel() {
         loadEstudiantes();
         loadMaterias();
       } else if (activeTab === 'notas') {
-        loadNotas();
         loadEstudiantes();
         loadMaterias();
       }
@@ -187,10 +186,15 @@ export default function AdminAcademicPanel() {
     }
   };
 
-  const loadNotas = async () => {
+  const loadNotas = async (ciEstudiante) => {
+    if (!ciEstudiante) {
+      setNotas([]);
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    const { data, error: apiError } = await academicService.getNotas();
+    const { data, error: apiError } = await academicService.getNotasEstudiante(ciEstudiante);
     if (apiError) {
       console.error('Error cargando notas:', apiError);
       setError('No se pudieron cargar las notas desde el backend.');
@@ -566,7 +570,7 @@ export default function AdminAcademicPanel() {
         setShowNotaModal(false);
         setEditingNota(null);
         setNotaForm({ id_user: '', id_materia: '', nota: '', tipo_nota: 'Parcial' });
-        loadNotas();
+        loadNotas(filtroEstudiante);
       }
     } else {
       // Crear nueva nota
@@ -586,8 +590,10 @@ export default function AdminAcademicPanel() {
         setSuccessMessage('Nota creada exitosamente');
         setTimeout(() => setSuccessMessage(''), 3000);
         setShowNotaModal(false);
+        // Si se creó para un estudiante diferente, cambiar el filtro
+        setFiltroEstudiante(notaForm.id_user);
         setNotaForm({ id_user: '', id_materia: '', nota: '', tipo_nota: 'Parcial' });
-        loadNotas();
+        loadNotas(notaForm.id_user);
       }
     }
     setLoading(false);
@@ -615,7 +621,7 @@ export default function AdminAcademicPanel() {
     } else {
       setSuccessMessage('Nota eliminada exitosamente');
       setTimeout(() => setSuccessMessage(''), 3000);
-      loadNotas();
+      loadNotas(filtroEstudiante);
     }
     setLoading(false);
   };
@@ -1174,7 +1180,10 @@ export default function AdminAcademicPanel() {
               </label>
               <select
                 value={filtroEstudiante}
-                onChange={(e) => setFiltroEstudiante(e.target.value)}
+                onChange={(e) => {
+                  setFiltroEstudiante(e.target.value);
+                  loadNotas(e.target.value);
+                }}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -1186,7 +1195,7 @@ export default function AdminAcademicPanel() {
                   cursor: 'pointer'
                 }}
               >
-                <option value="">Todos los estudiantes</option>
+                <option value="">Seleccionar estudiante</option>
                 {estudiantes.map(est => (
                   <option key={est.ci_est} value={est.ci_est}>
                     {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - {est.ci_est}
@@ -1274,14 +1283,20 @@ export default function AdminAcademicPanel() {
                 }}>
                   <div style={{ fontSize: '60px', marginBottom: '20px' }}>📊</div>
                   <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>
-                    {filtroEstudiante || filtroMateria ? 'No hay notas con estos filtros' : 'No hay notas creadas'}
+                    {!filtroEstudiante
+                      ? 'Selecciona un estudiante para ver sus notas'
+                      : filtroMateria
+                        ? 'No hay notas con estos filtros'
+                        : 'Este estudiante no tiene notas registradas'}
                   </h3>
                   <p style={{ margin: '0 0 20px 0', opacity: 0.7 }}>
-                    {filtroEstudiante || filtroMateria
-                      ? 'Intenta cambiar los filtros para ver otras notas'
-                      : 'Comienza creando tu primera nota haciendo clic en "Nueva Nota"'}
+                    {!filtroEstudiante
+                      ? 'Selecciona un estudiante del filtro de arriba para cargar y visualizar sus notas'
+                      : filtroMateria
+                        ? 'Intenta cambiar los filtros para ver otras notas'
+                        : 'Puedes crear la primera nota para este estudiante haciendo clic en "Nueva Nota"'}
                   </p>
-                  {!filtroEstudiante && !filtroMateria && (
+                  {filtroEstudiante && !filtroMateria && (
                     <button
                       onClick={() => setShowNotaModal(true)}
                       style={{
@@ -1295,7 +1310,7 @@ export default function AdminAcademicPanel() {
                         fontSize: '16px'
                       }}
                     >
-                      ➕ Crear Primera Nota
+                      ➕ Crear Nota para este Estudiante
                     </button>
                   )}
                 </div>
