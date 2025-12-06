@@ -438,8 +438,8 @@ export default function AdminAcademicPanel() {
 
       const response = await apiService.grupos.create(grupoData);
       const grupoCreado = response.data;
-      
-      setSuccessMessage(`✅ Grupo ${grupoCreado.id_grupo} creado exitosamente`);
+
+      setSuccessMessage(`✅ Grupo "${grupoCreado.nombre_grupo || grupoCreado.id_grupo}" creado exitosamente`);
       setTimeout(() => setSuccessMessage(''), 3000);
       
       // Actualizar el formulario con el grupo recién creado
@@ -2058,7 +2058,7 @@ export default function AdminAcademicPanel() {
                     <option value="" style={{ background: '#ffffff', color: '#666666' }}>-- Seleccionar grupo --</option>
                     {grupos.map(g => (
                       <option key={g.id_grupo} value={g.id_grupo} style={{ background: '#ffffff', color: '#000000' }}>
-                        Grupo {g.id_grupo} ({g.carrera || 'Sin carrera'})
+                        Grupo {g.nombre_grupo || g.id_grupo} ({g.carrera || 'Sin carrera'})
                       </option>
                     ))}
                   </select>
