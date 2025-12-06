@@ -150,10 +150,6 @@ export default function AdminAcademicPanel() {
       // El endpoint puede fallar si no hay datos o hay problema con el join Usuario
       setEstudiantes([]);
     } else {
-      console.log('👥 Estructura de estudiantes:', data);
-      if (data && data.length > 0) {
-        console.log('👤 Primer estudiante completo:', JSON.stringify(data[0], null, 2));
-      }
       setEstudiantes(data || []);
       if (error && activeTab === 'asignaciones') {
         setError(null); // Limpiar errores previos si la carga fue exitosa
@@ -1152,35 +1148,24 @@ export default function AdminAcademicPanel() {
                 }}
               >
                 <option value="">Seleccionar estudiante</option>
-                {estudiantes.map((est, index) => {
-                  // Log para debug
-                  if (index === 0) {
-                    console.log('🔍 Primer estudiante para debug:', JSON.stringify(est, null, 2));
-                  }
+                {estudiantes
+                  .filter(est => {
+                    // Solo incluir estudiantes con id_user.id_user válido (UUID del usuario)
+                    const userId = est.id_user?.id_user;
+                    return userId !== undefined && userId !== null;
+                  })
+                  .map(est => {
+                    // Usar id_user.id_user que es el UUID del usuario en la tabla usuario
+                    const userId = est.id_user.id_user;
+                    const nombre = est.id_user?.nombre || 'Sin nombre';
+                    const apellido = est.id_user?.apellido || '';
 
-                  // Intentar obtener el CI de usuario
-                  const userCi = est.usuario?.ci || est.id_user?.ci;
-                  const nombre = est.usuario?.nombre || est.id_user?.nombre || 'Sin nombre';
-                  const apellido = est.usuario?.apellido || est.id_user?.apellido || '';
-
-                  // Log de cada estudiante procesado
-                  console.log(`Estudiante ${index}:`, {
-                    ci_est: est.ci_est,
-                    tiene_usuario: !!est.usuario,
-                    tiene_id_user: !!est.id_user,
-                    userCi: userCi,
-                    nombre: nombre
-                  });
-
-                  // TEMPORAL: Mostrar todos los estudiantes para debug
-                  const displayCi = userCi || est.ci_est;
-
-                  return (
-                    <option key={est.ci_est} value={displayCi}>
-                      {nombre} {apellido} - CI: {displayCi} {!userCi ? '⚠️ (sin usuario)' : ''}
-                    </option>
-                  );
-                })}
+                    return (
+                      <option key={est.ci_est} value={userId}>
+                        {nombre} {apellido} - CI: {est.ci_est}
+                      </option>
+                    );
+                  })}
               </select>
             </div>
 
@@ -2480,26 +2465,28 @@ export default function AdminAcademicPanel() {
                       }}
                     >
                       <option value="" style={{ background: '#ffffff', color: '#666666' }}>Seleccionar estudiante</option>
-                      {estudiantes.map(est => {
-                        // Intentar obtener el CI de usuario
-                        const userCi = est.usuario?.ci || est.id_user?.ci;
-                        const nombre = est.usuario?.nombre || est.id_user?.nombre || 'Sin nombre';
-                        const apellido = est.usuario?.apellido || est.id_user?.apellido || '';
+                      {estudiantes
+                        .filter(est => {
+                          // Solo incluir estudiantes con id_user.id_user válido (UUID del usuario)
+                          const userId = est.id_user?.id_user;
+                          return userId !== undefined && userId !== null;
+                        })
+                        .map(est => {
+                          // Usar id_user.id_user que es el UUID del usuario en la tabla usuario
+                          const userId = est.id_user.id_user;
+                          const nombre = est.id_user?.nombre || 'Sin nombre';
+                          const apellido = est.id_user?.apellido || '';
 
-                        // TEMPORAL: Mostrar todos pero con advertencia
-                        const displayCi = userCi || est.ci_est;
-
-                        return (
-                          <option
-                            key={est.ci_est}
-                            value={displayCi}
-                            style={{ background: '#ffffff', color: '#000000' }}
-                            disabled={!userCi}
-                          >
-                            {nombre} {apellido} - CI: {displayCi} {!userCi ? '⚠️ (sin usuario - no disponible)' : ''}
-                          </option>
-                        );
-                      })}
+                          return (
+                            <option
+                              key={est.ci_est}
+                              value={userId}
+                              style={{ background: '#ffffff', color: '#000000' }}
+                            >
+                              {nombre} {apellido} - CI: {est.ci_est}
+                            </option>
+                          );
+                        })}
                     </select>
                   </div>
 
