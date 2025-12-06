@@ -1200,11 +1200,16 @@ export default function AdminAcademicPanel() {
                 }}
               >
                 <option value="">Seleccionar estudiante</option>
-                {estudiantes.map(est => (
-                  <option key={est.ci_est} value={est.ci_est}>
-                    {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - {est.ci_est}
-                  </option>
-                ))}
+                {estudiantes
+                  .filter(est => est.usuario || est.id_user) // Solo estudiantes con usuario
+                  .map(est => {
+                    const userCi = est.usuario?.ci || est.id_user?.ci || est.ci_est;
+                    return (
+                      <option key={est.ci_est} value={userCi}>
+                        {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - CI: {userCi}
+                      </option>
+                    );
+                  })}
               </select>
             </div>
 
@@ -2504,11 +2509,16 @@ export default function AdminAcademicPanel() {
                       }}
                     >
                       <option value="" style={{ background: '#ffffff', color: '#666666' }}>Seleccionar estudiante</option>
-                      {estudiantes.map(est => (
-                        <option key={est.ci_est} value={est.ci_est} style={{ background: '#ffffff', color: '#000000' }}>
-                          {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - CI: {est.ci_est}
-                        </option>
-                      ))}
+                      {estudiantes
+                        .filter(est => est.usuario || est.id_user) // Solo estudiantes con usuario
+                        .map(est => {
+                          const userCi = est.usuario?.ci || est.id_user?.ci || est.ci_est;
+                          return (
+                            <option key={est.ci_est} value={userCi} style={{ background: '#ffffff', color: '#000000' }}>
+                              {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - CI: {userCi}
+                            </option>
+                          );
+                        })}
                     </select>
                   </div>
 
