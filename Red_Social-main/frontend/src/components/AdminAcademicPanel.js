@@ -65,7 +65,7 @@ export default function AdminAcademicPanel() {
   const [modoCrearGrupo, setModoCrearGrupo] = useState(false);
   const [nuevoGrupoForm, setNuevoGrupoForm] = useState({
     id_grupo: '',
-    carrera: ''
+    gestion_grupo: ''
   });
 
   // Estados para notas
@@ -429,16 +429,15 @@ export default function AdminAcademicPanel() {
       // Crear nuevo grupo con el formato correcto del backend
       const grupoData = {
         nombre_grupo: nuevoGrupoForm.id_grupo, // El nombre del grupo (ej: "A", "B", "1A")
-        carrera: nuevoGrupoForm.carrera || null, // Carrera del grupo
-        gestion_grupo: null // Sin gestión por ahora
+        gestion_grupo: nuevoGrupoForm.gestion_grupo || null // Gestión académica (ej: "2024-1", "2025-2")
       };
 
       const response = await apiService.grupos.create(grupoData);
       const grupoCreado = response.data;
 
       const nombreGrupo = grupoCreado.nombre_grupo || grupoCreado.id_grupo;
-      const carreraGrupo = grupoCreado.carrera ? ` - ${grupoCreado.carrera}` : '';
-      setSuccessMessage(`✅ Grupo "${nombreGrupo}"${carreraGrupo} creado exitosamente`);
+      const gestionInfo = grupoCreado.gestion_grupo ? ` (Gestión: ${grupoCreado.gestion_grupo})` : '';
+      setSuccessMessage(`✅ Grupo "${nombreGrupo}"${gestionInfo} creado exitosamente`);
       setTimeout(() => setSuccessMessage(''), 3000);
       
       // Actualizar el formulario con el grupo recién creado
@@ -452,7 +451,7 @@ export default function AdminAcademicPanel() {
       
       // Cambiar a modo selección
       setModoCrearGrupo(false);
-      setNuevoGrupoForm({ id_grupo: '', carrera: '' });
+      setNuevoGrupoForm({ id_grupo: '', gestion_grupo: '' });
       
     } catch (err) {
       setError(err.message || 'Error al crear grupo');
@@ -2065,7 +2064,7 @@ export default function AdminAcademicPanel() {
                     <option value="" style={{ background: '#ffffff', color: '#666666' }}>-- Seleccionar grupo --</option>
                     {grupos.map(g => (
                       <option key={g.id_grupo} value={g.id_grupo} style={{ background: '#ffffff', color: '#000000' }}>
-                        Grupo {g.nombre_grupo || g.id_grupo} ({g.carrera || 'Sin carrera'})
+                        Grupo {g.nombre_grupo || g.id_grupo}{g.gestion_grupo ? ` - ${g.gestion_grupo}` : ''}
                       </option>
                     ))}
                   </select>
@@ -2159,15 +2158,13 @@ export default function AdminAcademicPanel() {
 
                 <div style={{ marginBottom: '18px' }}>
                   <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', color: '#ffffff', fontSize: '15px' }}>
-                    Carrera *
+                    Gestión (Opcional)
                   </label>
                   <input
                     type="text"
-                    required
-                    list="carreras-list"
-                    placeholder="Selecciona o escribe una carrera..."
-                    value={nuevoGrupoForm.carrera}
-                    onChange={(e) => setNuevoGrupoForm({...nuevoGrupoForm, carrera: e.target.value})}
+                    placeholder="Ej: 2024-1, 2025-2..."
+                    value={nuevoGrupoForm.gestion_grupo}
+                    onChange={(e) => setNuevoGrupoForm({...nuevoGrupoForm, gestion_grupo: e.target.value})}
                     style={{
                       width: '100%',
                       padding: '14px',
@@ -2182,11 +2179,6 @@ export default function AdminAcademicPanel() {
                     onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
                     onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.2)'}
                   />
-                  <datalist id="carreras-list">
-                    {carreras.map((carrera, index) => (
-                      <option key={index} value={carrera} />
-                    ))}
-                  </datalist>
                 </div>
 
                 <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginTop: '30px' }}>
@@ -2197,7 +2189,7 @@ export default function AdminAcademicPanel() {
                       setShowAsignacionModal(false);
                       setAsignacionForm({ ci_estudiante: '', id_materia: '', id_grupo: '' });
                       setModoCrearGrupo(false);
-                      setNuevoGrupoForm({ id_grupo: '', carrera: '' });
+                      setNuevoGrupoForm({ id_grupo: '', gestion_grupo: '' });
                     }}
                     style={{
                       padding: '14px 28px',
