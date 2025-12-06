@@ -67,6 +67,19 @@ export default function AdminAcademicPanel() {
     carrera: ''
   });
 
+  // Estados para notas
+  const [notas, setNotas] = useState([]);
+  const [showNotaModal, setShowNotaModal] = useState(false);
+  const [editingNota, setEditingNota] = useState(null);
+  const [notaForm, setNotaForm] = useState({
+    id_user: '',
+    id_materia: '',
+    nota: '',
+    tipo_nota: 'Parcial'
+  });
+  const [filtroEstudiante, setFiltroEstudiante] = useState('');
+  const [filtroMateria, setFiltroMateria] = useState('');
+
   // Verificar que el usuario sea administrador
   useEffect(() => {
     if (user?.rol !== 'administrador') {
@@ -85,6 +98,10 @@ export default function AdminAcademicPanel() {
         loadEstudiantes();
         loadCarreras();
       } else if (activeTab === 'asignaciones') {
+        loadEstudiantes();
+        loadMaterias();
+      } else if (activeTab === 'notas') {
+        loadNotas();
         loadEstudiantes();
         loadMaterias();
       }
@@ -168,6 +185,20 @@ export default function AdminAcademicPanel() {
       const carrerasUnicas = [...new Set(data.map(est => est.carrera))].filter(Boolean);
       setCarreras(carrerasUnicas);
     }
+  };
+
+  const loadNotas = async () => {
+    setLoading(true);
+    setError(null);
+    const { data, error: apiError } = await academicService.getNotas();
+    if (apiError) {
+      console.error('Error cargando notas:', apiError);
+      setError('No se pudieron cargar las notas desde el backend.');
+      setNotas([]);
+    } else {
+      setNotas(data || []);
+    }
+    setLoading(false);
   };
 
   // Filtrar grupos por carrera seleccionada
@@ -511,6 +542,84 @@ export default function AdminAcademicPanel() {
     setLoading(false);
   };
 
+  // ============= FUNCIONES CRUD NOTAS =============
+
+  const handleCreateNota = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    if (editingNota) {
+      // Actualizar nota existente
+      const updateData = {
+        nota: parseFloat(notaForm.nota),
+        tipo_nota: notaForm.tipo_nota
+      };
+
+      const { data, error: apiError } = await academicService.updateNota(editingNota.id_nota, updateData);
+
+      if (apiError) {
+        setError(apiError);
+      } else {
+        setSuccessMessage('Nota actualizada exitosamente');
+        setTimeout(() => setSuccessMessage(''), 3000);
+        setShowNotaModal(false);
+        setEditingNota(null);
+        setNotaForm({ id_user: '', id_materia: '', nota: '', tipo_nota: 'Parcial' });
+        loadNotas();
+      }
+    } else {
+      // Crear nueva nota
+      const notaData = {
+        id_user: notaForm.id_user,
+        id_materia: notaForm.id_materia,
+        nota: parseFloat(notaForm.nota),
+        tipo_nota: notaForm.tipo_nota,
+        origen: 'MANUAL'
+      };
+
+      const { data, error: apiError } = await academicService.createNota(notaData);
+
+      if (apiError) {
+        setError(apiError);
+      } else {
+        setSuccessMessage('Nota creada exitosamente');
+        setTimeout(() => setSuccessMessage(''), 3000);
+        setShowNotaModal(false);
+        setNotaForm({ id_user: '', id_materia: '', nota: '', tipo_nota: 'Parcial' });
+        loadNotas();
+      }
+    }
+    setLoading(false);
+  };
+
+  const handleEditNota = (nota) => {
+    setEditingNota(nota);
+    setNotaForm({
+      id_user: nota.id_user || '',
+      id_materia: nota.id_materia || '',
+      nota: nota.nota?.toString() || '',
+      tipo_nota: nota.tipo_nota || 'Parcial'
+    });
+    setShowNotaModal(true);
+  };
+
+  const handleDeleteNota = async (idNota) => {
+    if (!window.confirm('¿Estás seguro de eliminar esta nota?')) return;
+
+    setLoading(true);
+    const { error: apiError } = await academicService.deleteNota(idNota);
+
+    if (apiError) {
+      setError(apiError);
+    } else {
+      setSuccessMessage('Nota eliminada exitosamente');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      loadNotas();
+    }
+    setLoading(false);
+  };
+
   // ============= RENDERIZADO =============
   
   if (user?.rol !== 'administrador') {
@@ -586,7 +695,7 @@ export default function AdminAcademicPanel() {
         marginBottom: '20px',
         borderBottom: `2px solid ${theme.colors.primaryLight}20`
       }}>
-        {['materias', 'horarios', 'asignaciones', 'usuarios'].map(tab => (
+        {['materias', 'horarios', 'notas', 'asignaciones', 'usuarios'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -602,9 +711,10 @@ export default function AdminAcademicPanel() {
               transition: 'all 0.2s'
             }}
           >
-            {tab === 'materias' && '📚'} 
-            {tab === 'horarios' && '🕐'} 
-            {tab === 'asignaciones' && '👥'} 
+            {tab === 'materias' && '📚'}
+            {tab === 'horarios' && '🕐'}
+            {tab === 'notas' && '📊'}
+            {tab === 'asignaciones' && '👥'}
             {tab === 'usuarios' && '👤'}
             {' '}{tab}
           </button>
@@ -1007,6 +1117,354 @@ export default function AdminAcademicPanel() {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'notas' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Gestión de Notas</h2>
+            <button
+              onClick={() => {
+                setShowNotaModal(true);
+                setEditingNota(null);
+                setNotaForm({ id_user: '', id_materia: '', nota: '', tipo_nota: 'Parcial' });
+              }}
+              style={{
+                padding: '12px 28px',
+                background: theme.colors.primary,
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '14px',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'scale(1.05)';
+                e.target.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'scale(1)';
+                e.target.style.opacity = '1';
+              }}
+            >
+              <span>✨</span> Nueva Nota
+            </button>
+          </div>
+
+          {/* Filtros */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '15px',
+            marginBottom: '25px',
+            padding: '20px',
+            background: theme.colors.cardBackground,
+            borderRadius: '12px',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
+                Filtrar por Estudiante
+              </label>
+              <select
+                value={filtroEstudiante}
+                onChange={(e) => setFiltroEstudiante(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.colors.primaryLight}50`,
+                  background: '#ffffff',
+                  color: '#000000',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="">Todos los estudiantes</option>
+                {estudiantes.map(est => (
+                  <option key={est.ci_est} value={est.ci_est}>
+                    {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - {est.ci_est}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
+                Filtrar por Materia
+              </label>
+              <select
+                value={filtroMateria}
+                onChange={(e) => setFiltroMateria(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.colors.primaryLight}50`,
+                  background: '#ffffff',
+                  color: '#000000',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="">Todas las materias</option>
+                {materias.map(m => (
+                  <option key={m.id_materia} value={m.id_materia}>
+                    {m.nombre_materia} ({m.codigo_materia})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {(filtroEstudiante || filtroMateria) && (
+              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setFiltroEstudiante('');
+                    setFiltroMateria('');
+                  }}
+                  style={{
+                    padding: '12px 20px',
+                    background: 'rgba(255,255,255,0.1)',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    fontSize: '14px',
+                    transition: 'all 0.2s',
+                    width: '100%'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.15)'}
+                  onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
+                >
+                  🔄 Limpiar Filtros
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Lista de notas */}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '10px' }}>⏳</div>
+              <p>Cargando notas...</p>
+            </div>
+          ) : (() => {
+            const notasFiltradas = notas.filter(nota => {
+              const matchEstudiante = !filtroEstudiante || nota.id_user === filtroEstudiante;
+              const matchMateria = !filtroMateria || nota.id_materia === filtroMateria;
+              return matchEstudiante && matchMateria;
+            });
+
+            if (notasFiltradas.length === 0) {
+              return (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '60px',
+                  background: theme.colors.cardBackground,
+                  borderRadius: '12px',
+                  border: `2px dashed ${theme.colors.primaryLight}40`
+                }}>
+                  <div style={{ fontSize: '60px', marginBottom: '20px' }}>📊</div>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>
+                    {filtroEstudiante || filtroMateria ? 'No hay notas con estos filtros' : 'No hay notas creadas'}
+                  </h3>
+                  <p style={{ margin: '0 0 20px 0', opacity: 0.7 }}>
+                    {filtroEstudiante || filtroMateria
+                      ? 'Intenta cambiar los filtros para ver otras notas'
+                      : 'Comienza creando tu primera nota haciendo clic en "Nueva Nota"'}
+                  </p>
+                  {!filtroEstudiante && !filtroMateria && (
+                    <button
+                      onClick={() => setShowNotaModal(true)}
+                      style={{
+                        padding: '12px 24px',
+                        background: theme.colors.primary,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '16px'
+                      }}
+                    >
+                      ➕ Crear Primera Nota
+                    </button>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+                gap: '20px'
+              }}>
+                {notasFiltradas.map(nota => {
+                  const estudiante = estudiantes.find(e => e.ci_est === nota.id_user);
+                  const materia = materias.find(m => m.id_materia === nota.id_materia);
+
+                  const getNotaColor = (valor) => {
+                    if (valor >= 70) return '#4CAF50';
+                    if (valor >= 51) return '#FFC107';
+                    return '#f44336';
+                  };
+
+                  return (
+                    <div
+                      key={nota.id_nota}
+                      style={{
+                        padding: '24px',
+                        background: '#2c2c3e',
+                        borderRadius: '16px',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px)';
+                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        marginBottom: '16px'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <h3 style={{ margin: '0 0 8px 0', color: '#ffffff', fontSize: '18px', fontWeight: '600' }}>
+                            {materia?.nombre_materia || nota.materia?.nombre_materia || 'Materia'}
+                          </h3>
+                          <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                            {materia?.codigo_materia || nota.materia?.codigo_materia || 'N/A'}
+                          </p>
+                        </div>
+                        <div style={{
+                          padding: '8px 16px',
+                          background: `${getNotaColor(nota.nota)}30`,
+                          borderRadius: '8px',
+                          border: `2px solid ${getNotaColor(nota.nota)}`,
+                          fontSize: '24px',
+                          fontWeight: '700',
+                          color: getNotaColor(nota.nota),
+                          minWidth: '70px',
+                          textAlign: 'center'
+                        }}>
+                          {nota.nota}
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        marginBottom: '16px',
+                        padding: '12px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '8px'
+                      }}>
+                        <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ color: theme.colors.primaryLight }}>👤</span>
+                          <strong style={{ color: 'rgba(255,255,255,0.95)' }}>Estudiante:</strong>
+                          {estudiante?.usuario?.nombre || estudiante?.id_user?.nombre || 'N/A'}{' '}
+                          {estudiante?.usuario?.apellido || estudiante?.id_user?.apellido || ''}
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>(CI: {nota.id_user})</span>
+                        </p>
+                        <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ color: theme.colors.primaryLight }}>📝</span>
+                          <strong style={{ color: 'rgba(255,255,255,0.95)' }}>Tipo:</strong> {nota.tipo_nota}
+                        </p>
+                        <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ color: theme.colors.primaryLight }}>📅</span>
+                          <strong style={{ color: 'rgba(255,255,255,0.95)' }}>Fecha:</strong>
+                          {nota.fecha_registro_nota ? new Date(nota.fecha_registro_nota).toLocaleDateString('es-ES') : 'N/A'}
+                        </p>
+                        <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <strong style={{ color: 'rgba(255,255,255,0.8)' }}>Origen:</strong> {nota.origen || 'MANUAL'}
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                        <button
+                          onClick={() => handleEditNota(nota)}
+                          style={{
+                            flex: 1,
+                            padding: '10px 16px',
+                            background: 'rgba(255,255,255,0.1)',
+                            color: '#ffffff',
+                            border: `1px solid ${theme.colors.primaryLight}50`,
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = `${theme.colors.primary}30`;
+                            e.target.style.borderColor = theme.colors.primaryLight;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'rgba(255,255,255,0.1)';
+                            e.target.style.borderColor = `${theme.colors.primaryLight}50`;
+                          }}
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteNota(nota.id_nota)}
+                          style={{
+                            flex: 1,
+                            padding: '10px 16px',
+                            background: 'rgba(231, 76, 60, 0.15)',
+                            color: '#ff6b6b',
+                            border: '1px solid rgba(231, 76, 60, 0.3)',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = 'rgba(231, 76, 60, 0.25)';
+                            e.target.style.borderColor = '#e74c3c';
+                            e.target.style.color = '#ff5252';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'rgba(231, 76, 60, 0.15)';
+                            e.target.style.borderColor = 'rgba(231, 76, 60, 0.3)';
+                            e.target.style.color = '#ff6b6b';
+                          }}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -1968,6 +2426,209 @@ export default function AdminAcademicPanel() {
                   }}
                 >
                   {loading ? 'Asignando...' : 'Asignar Materia'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nueva/Editar Nota */}
+      {showNotaModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: '#2c2c3e',
+            padding: '30px',
+            borderRadius: '16px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <h2 style={{ marginTop: 0, color: '#ffffff', marginBottom: '25px', fontSize: '24px' }}>
+              {editingNota ? '✏️ Editar Nota' : '📊 Nueva Nota'}
+            </h2>
+            <form onSubmit={handleCreateNota}>
+              {!editingNota && (
+                <>
+                  <div style={{ marginBottom: '18px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
+                      Estudiante *
+                    </label>
+                    <select
+                      required
+                      value={notaForm.id_user}
+                      onChange={(e) => setNotaForm({...notaForm, id_user: e.target.value})}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: `1px solid ${theme.colors.primaryLight}50`,
+                        background: '#ffffff',
+                        color: '#000000',
+                        fontSize: '14px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="" style={{ background: '#ffffff', color: '#666666' }}>Seleccionar estudiante</option>
+                      {estudiantes.map(est => (
+                        <option key={est.ci_est} value={est.ci_est} style={{ background: '#ffffff', color: '#000000' }}>
+                          {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - CI: {est.ci_est}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ marginBottom: '18px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
+                      Materia *
+                    </label>
+                    <select
+                      required
+                      value={notaForm.id_materia}
+                      onChange={(e) => setNotaForm({...notaForm, id_materia: e.target.value})}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: `1px solid ${theme.colors.primaryLight}50`,
+                        background: '#ffffff',
+                        color: '#000000',
+                        fontSize: '14px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="" style={{ background: '#ffffff', color: '#666666' }}>Seleccionar materia</option>
+                      {materias.map(m => (
+                        <option key={m.id_materia} value={m.id_materia} style={{ background: '#ffffff', color: '#000000' }}>
+                          {m.nombre_materia || m.nombre} ({m.codigo_materia || m.codigo})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
+                  Tipo de Nota *
+                </label>
+                <select
+                  required
+                  value={notaForm.tipo_nota}
+                  onChange={(e) => setNotaForm({...notaForm, tipo_nota: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.colors.primaryLight}50`,
+                    background: '#ffffff',
+                    color: '#000000',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="Parcial" style={{ background: '#ffffff', color: '#000000' }}>Parcial</option>
+                  <option value="Final" style={{ background: '#ffffff', color: '#000000' }}>Final</option>
+                  <option value="Recuperatorio" style={{ background: '#ffffff', color: '#000000' }}>Recuperatorio</option>
+                  <option value="Trabajo" style={{ background: '#ffffff', color: '#000000' }}>Trabajo</option>
+                  <option value="Proyecto" style={{ background: '#ffffff', color: '#000000' }}>Proyecto</option>
+                  <option value="Otros" style={{ background: '#ffffff', color: '#000000' }}>Otros</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
+                  Nota (0-100) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={notaForm.nota}
+                  onChange={(e) => setNotaForm({...notaForm, nota: e.target.value})}
+                  placeholder="Ej: 75.5"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.colors.primaryLight}50`,
+                    background: 'rgba(255,255,255,0.08)',
+                    color: '#ffffff',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '25px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNotaModal(false);
+                    setEditingNota(null);
+                    setNotaForm({ id_user: '', id_materia: '', nota: '', tipo_nota: 'Parcial' });
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    background: 'rgba(255,255,255,0.1)',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    fontSize: '14px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.15)'}
+                  onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    padding: '12px 24px',
+                    background: loading ? `${theme.colors.primary}60` : theme.colors.primary,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    transition: 'all 0.2s',
+                    boxShadow: `0 4px 12px ${theme.colors.primary}40`
+                  }}
+                  onMouseOver={(e) => {
+                    if (!loading) {
+                      e.target.style.background = theme.colors.primaryDark || theme.colors.primary;
+                      e.target.style.transform = 'translateY(-2px)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!loading) {
+                      e.target.style.background = theme.colors.primary;
+                      e.target.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  {loading ? (editingNota ? 'Actualizando...' : 'Creando...') : (editingNota ? 'Actualizar Nota' : 'Crear Nota')}
                 </button>
               </div>
             </form>
