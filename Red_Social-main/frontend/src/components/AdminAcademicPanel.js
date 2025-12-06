@@ -1153,12 +1153,18 @@ export default function AdminAcademicPanel() {
               >
                 <option value="">Seleccionar estudiante</option>
                 {estudiantes
-                  .filter(est => est.usuario || est.id_user) // Solo estudiantes con usuario
+                  .filter(est => {
+                    // Solo incluir si tiene usuario con CI válido
+                    const userCi = est.usuario?.ci || est.id_user?.ci;
+                    return userCi !== undefined && userCi !== null;
+                  })
                   .map(est => {
-                    const userCi = est.usuario?.ci || est.id_user?.ci || est.ci_est;
+                    const userCi = est.usuario?.ci || est.id_user?.ci;
+                    const nombre = est.usuario?.nombre || est.id_user?.nombre || 'Sin nombre';
+                    const apellido = est.usuario?.apellido || est.id_user?.apellido || '';
                     return (
                       <option key={est.ci_est} value={userCi}>
-                        {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - CI: {userCi}
+                        {nombre} {apellido} - CI: {userCi}
                       </option>
                     );
                   })}
@@ -2462,12 +2468,18 @@ export default function AdminAcademicPanel() {
                     >
                       <option value="" style={{ background: '#ffffff', color: '#666666' }}>Seleccionar estudiante</option>
                       {estudiantes
-                        .filter(est => est.usuario || est.id_user) // Solo estudiantes con usuario
+                        .filter(est => {
+                          // Solo incluir si tiene usuario con CI válido
+                          const userCi = est.usuario?.ci || est.id_user?.ci;
+                          return userCi !== undefined && userCi !== null;
+                        })
                         .map(est => {
-                          const userCi = est.usuario?.ci || est.id_user?.ci || est.ci_est;
+                          const userCi = est.usuario?.ci || est.id_user?.ci;
+                          const nombre = est.usuario?.nombre || est.id_user?.nombre || 'Sin nombre';
+                          const apellido = est.usuario?.apellido || est.id_user?.apellido || '';
                           return (
                             <option key={est.ci_est} value={userCi} style={{ background: '#ffffff', color: '#000000' }}>
-                              {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - CI: {userCi}
+                              {nombre} {apellido} - CI: {userCi}
                             </option>
                           );
                         })}
