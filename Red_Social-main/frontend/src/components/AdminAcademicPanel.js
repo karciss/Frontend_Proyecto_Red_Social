@@ -433,13 +433,16 @@ export default function AdminAcademicPanel() {
       // Crear nuevo grupo con el formato correcto del backend
       const grupoData = {
         nombre_grupo: nuevoGrupoForm.id_grupo, // El nombre del grupo (ej: "A", "B", "1A")
+        carrera: nuevoGrupoForm.carrera || null, // Carrera del grupo
         gestion_grupo: null // Sin gestión por ahora
       };
 
       const response = await apiService.grupos.create(grupoData);
       const grupoCreado = response.data;
 
-      setSuccessMessage(`✅ Grupo "${grupoCreado.nombre_grupo || grupoCreado.id_grupo}" creado exitosamente`);
+      const nombreGrupo = grupoCreado.nombre_grupo || grupoCreado.id_grupo;
+      const carreraGrupo = grupoCreado.carrera ? ` - ${grupoCreado.carrera}` : '';
+      setSuccessMessage(`✅ Grupo "${nombreGrupo}"${carreraGrupo} creado exitosamente`);
       setTimeout(() => setSuccessMessage(''), 3000);
       
       // Actualizar el formulario con el grupo recién creado
