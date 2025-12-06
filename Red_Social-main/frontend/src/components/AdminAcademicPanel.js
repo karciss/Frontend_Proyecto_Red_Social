@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import academicService from '../services/academicService';
+import { apiService } from '../services/api';
 import AdminUsersPanel from './AdminUsersPanel';
 
 /**
@@ -427,44 +428,16 @@ export default function AdminAcademicPanel() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Obtener token actualizado
-      const token = localStorage.getItem('user-token');
-      
-      if (!token) {
-        setError('No hay sesión activa. Por favor, inicia sesión nuevamente.');
-        setLoading(false);
-        return;
-      }
-      
       // Crear nuevo grupo con el formato correcto del backend
       const grupoData = {
         nombre_grupo: nuevoGrupoForm.id_grupo, // El nombre del grupo (ej: "A", "B", "1A")
         gestion_grupo: null // Sin gestión por ahora
       };
-      
-      const response = await fetch('http://localhost:8000/api/v1/grupos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(grupoData)
-      });
-      
-      if (response.status === 401 || response.status === 403) {
-        setError('Tu sesión ha expirado. Por favor, cierra esta ventana y vuelve a iniciar sesión.');
-        setLoading(false);
-        return;
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Error al crear grupo');
-      }
-      
-      const grupoCreado = await response.json();
+
+      const response = await apiService.grupos.create(grupoData);
+      const grupoCreado = response.data;
       
       setSuccessMessage(`✅ Grupo ${grupoCreado.id_grupo} creado exitosamente`);
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -493,37 +466,13 @@ export default function AdminAcademicPanel() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Obtener token actualizado
-      const token = localStorage.getItem('user-token');
-      
-      if (!token) {
-        setError('No hay sesión activa. Por favor, inicia sesión nuevamente.');
-        setLoading(false);
-        return;
-      }
-      
       // Asignar grupo al estudiante
-      const response = await fetch(`http://localhost:8000/api/v1/estudiantes/${grupoEstudianteForm.ci_estudiante}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ id_grupo: grupoEstudianteForm.id_grupo })
-      });
-      
-      if (response.status === 401 || response.status === 403) {
-        setError('Tu sesión ha expirado. Por favor, cierra esta ventana y vuelve a iniciar sesión.');
-        setLoading(false);
-        return;
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Error al asignar grupo');
-      }
+      await apiService.estudiantes.update(
+        grupoEstudianteForm.ci_estudiante,
+        { id_grupo: grupoEstudianteForm.id_grupo }
+      );
       
       setSuccessMessage('Grupo asignado exitosamente. Ahora puedes asignar la materia.');
       setTimeout(() => setSuccessMessage(''), 3000);
