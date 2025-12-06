@@ -1152,22 +1152,35 @@ export default function AdminAcademicPanel() {
                 }}
               >
                 <option value="">Seleccionar estudiante</option>
-                {estudiantes
-                  .filter(est => {
-                    // Solo incluir si tiene usuario con CI válido
-                    const userCi = est.usuario?.ci || est.id_user?.ci;
-                    return userCi !== undefined && userCi !== null;
-                  })
-                  .map(est => {
-                    const userCi = est.usuario?.ci || est.id_user?.ci;
-                    const nombre = est.usuario?.nombre || est.id_user?.nombre || 'Sin nombre';
-                    const apellido = est.usuario?.apellido || est.id_user?.apellido || '';
-                    return (
-                      <option key={est.ci_est} value={userCi}>
-                        {nombre} {apellido} - CI: {userCi}
-                      </option>
-                    );
-                  })}
+                {estudiantes.map((est, index) => {
+                  // Log para debug
+                  if (index === 0) {
+                    console.log('🔍 Primer estudiante para debug:', JSON.stringify(est, null, 2));
+                  }
+
+                  // Intentar obtener el CI de usuario
+                  const userCi = est.usuario?.ci || est.id_user?.ci;
+                  const nombre = est.usuario?.nombre || est.id_user?.nombre || 'Sin nombre';
+                  const apellido = est.usuario?.apellido || est.id_user?.apellido || '';
+
+                  // Log de cada estudiante procesado
+                  console.log(`Estudiante ${index}:`, {
+                    ci_est: est.ci_est,
+                    tiene_usuario: !!est.usuario,
+                    tiene_id_user: !!est.id_user,
+                    userCi: userCi,
+                    nombre: nombre
+                  });
+
+                  // TEMPORAL: Mostrar todos los estudiantes para debug
+                  const displayCi = userCi || est.ci_est;
+
+                  return (
+                    <option key={est.ci_est} value={displayCi}>
+                      {nombre} {apellido} - CI: {displayCi} {!userCi ? '⚠️ (sin usuario)' : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -2467,22 +2480,26 @@ export default function AdminAcademicPanel() {
                       }}
                     >
                       <option value="" style={{ background: '#ffffff', color: '#666666' }}>Seleccionar estudiante</option>
-                      {estudiantes
-                        .filter(est => {
-                          // Solo incluir si tiene usuario con CI válido
-                          const userCi = est.usuario?.ci || est.id_user?.ci;
-                          return userCi !== undefined && userCi !== null;
-                        })
-                        .map(est => {
-                          const userCi = est.usuario?.ci || est.id_user?.ci;
-                          const nombre = est.usuario?.nombre || est.id_user?.nombre || 'Sin nombre';
-                          const apellido = est.usuario?.apellido || est.id_user?.apellido || '';
-                          return (
-                            <option key={est.ci_est} value={userCi} style={{ background: '#ffffff', color: '#000000' }}>
-                              {nombre} {apellido} - CI: {userCi}
-                            </option>
-                          );
-                        })}
+                      {estudiantes.map(est => {
+                        // Intentar obtener el CI de usuario
+                        const userCi = est.usuario?.ci || est.id_user?.ci;
+                        const nombre = est.usuario?.nombre || est.id_user?.nombre || 'Sin nombre';
+                        const apellido = est.usuario?.apellido || est.id_user?.apellido || '';
+
+                        // TEMPORAL: Mostrar todos pero con advertencia
+                        const displayCi = userCi || est.ci_est;
+
+                        return (
+                          <option
+                            key={est.ci_est}
+                            value={displayCi}
+                            style={{ background: '#ffffff', color: '#000000' }}
+                            disabled={!userCi}
+                          >
+                            {nombre} {apellido} - CI: {displayCi} {!userCi ? '⚠️ (sin usuario - no disponible)' : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
