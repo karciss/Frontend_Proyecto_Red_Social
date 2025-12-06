@@ -1197,7 +1197,7 @@ export default function AdminAcademicPanel() {
               >
                 <option value="">Seleccionar estudiante</option>
                 {estudiantes.map(est => (
-                  <option key={est.ci_est} value={est.ci_est}>
+                  <option key={est.ci_est} value={est.id_user || est.usuario?.ci || est.ci_est}>
                     {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - {est.ci_est}
                   </option>
                 ))}
@@ -2501,7 +2501,7 @@ export default function AdminAcademicPanel() {
                     >
                       <option value="" style={{ background: '#ffffff', color: '#666666' }}>Seleccionar estudiante</option>
                       {estudiantes.map(est => (
-                        <option key={est.ci_est} value={est.ci_est} style={{ background: '#ffffff', color: '#000000' }}>
+                        <option key={est.ci_est} value={est.id_user || est.usuario?.ci || est.ci_est} style={{ background: '#ffffff', color: '#000000' }}>
                           {est.usuario?.nombre || est.id_user?.nombre} {est.usuario?.apellido || est.id_user?.apellido} - CI: {est.ci_est}
                         </option>
                       ))}
