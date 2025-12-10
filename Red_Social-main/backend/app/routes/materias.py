@@ -59,9 +59,9 @@ async def get_my_materias(
         
         id_grupo = est_response.data[0]["id_grupo"]
         
-        # Obtener materias del grupo
-        response = db.table("grupomateria").select("Materia(*)").eq("id_grupo", id_grupo).execute()
-        materias = [item["Materia"] for item in response.data if item.get("Materia")]
+        # Obtener materias del grupo con información del docente
+        response = db.table("grupomateria").select("materia(*, docente:id_doc(ci_doc, usuario:id_user(*)))").eq("id_grupo", id_grupo).execute()
+        materias = [item["materia"] for item in response.data if item.get("materia")]
         return materias
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
