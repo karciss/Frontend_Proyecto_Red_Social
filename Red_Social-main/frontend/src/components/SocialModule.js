@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { publicacionesService } from '../services/publicacionesService';
 import { uploadFiles, validateFiles, getMediaType } from '../services/uploadService';
+import amigosService from '../services/amigosService';
 import DetailPanel from './DetailPanel';
 import '../styles/Social.css';
 
@@ -12,7 +13,9 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
   
   // Estados para las publicaciones y eventos
   const [activeTab, setActiveTab] = useState('recientes');
+  const [popularSubTab, setPopularSubTab] = useState('reacciones'); // 'reacciones' o 'comentarios'
   const [publicaciones, setPublicaciones] = useState([]);
+  const [amigos, setAmigos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newPostContent, setNewPostContent] = useState('');
@@ -22,32 +25,56 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
   const [errorText, setErrorText] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileType, setFileType] = useState('imagen'); // imagen, documento, enlace
+  const [isEventPost, setIsEventPost] = useState(false); // Marcar si la publicación es un evento
+  const [openMenuId, setOpenMenuId] = useState(null); // ID de la publicación con menú abierto
+  const [editingPostId, setEditingPostId] = useState(null); // ID de la publicación en edición
+  const [editContent, setEditContent] = useState(''); // Contenido editado
+  const [editFiles, setEditFiles] = useState([]); // Archivos para edición
+  const [editFileType, setEditFileType] = useState('imagen'); // Tipo de archivo en edición
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePostId, setDeletePostId] = useState(null);
+  const [deletingPost, setDeletingPost] = useState(false);
   const fileInputRef = useRef(null);
-  const [eventos, setEventos] = useState([
-    {
-      id: 'ev1',
-      titulo: 'Feria Cultural - La Fevalle',
-      descripcion: 'Actividades culturales y presentaciones artísticas en el campus.',
-      fecha: '2025-11-02T18:00:00',
-      lugar: 'Plaza Central',
-      organizador: 'Comité Cultural'
-    },
-    {
-      id: 'ev2',
-      titulo: 'Campeonato de Futsal',
-      descripcion: 'Torneo interfacultades de futsal. Inscripciones abiertas para equipos.',
-      fecha: '2025-11-15T09:00:00',
-      lugar: 'Gimnasio Principal',
-      organizador: 'Departamento de Deportes'
-    }
-  ]);
-  const [showEventForm, setShowEventForm] = useState(false);
-  const [newEvent, setNewEvent] = useState({ titulo: '', descripcion: '', fecha: '', lugar: '' });
+  const editFileInputRef = useRef(null);
 
   // Cargar publicaciones desde el backend
   useEffect(() => {
     loadPublicaciones();
+    loadAmigos();
   }, []);
+
+  // Verificar si el usuario puede crear eventos (solo admins y profesores)
+  const canCreateEvents = () => {
+    if (!user) return false;
+    const rol = user.rol?.toLowerCase();
+    return rol === 'admin' || rol === 'administrador' || rol === 'profesor' || rol === 'docente';
+  };
+
+  const loadAmigos = async () => {
+    try {
+      const response = await amigosService.obtenerAmigos();
+      console.log('📋 Amigos cargados:', response);
+      
+      let amigosData = [];
+      if (Array.isArray(response)) {
+        amigosData = response;
+      } else if (response && Array.isArray(response.data)) {
+        amigosData = response.data;
+      } else if (response && response.amigos && Array.isArray(response.amigos)) {
+        amigosData = response.amigos;
+      }
+      
+      console.log('👥 Total de amigos:', amigosData.length);
+      console.log('👥 IDs de amigos:', amigosData.map(a => ({
+        id: a.amigo?.id_user || a.id_user,
+        nombre: a.amigo?.nombre || a.nombre
+      })));
+      setAmigos(amigosData);
+    } catch (error) {
+      console.error('❌ Error al cargar amigos:', error);
+      setAmigos([]);
+    }
+  };
 
   const loadPublicaciones = async () => {
     try {
@@ -59,6 +86,11 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
         setError(apiError);
         console.error('Error al cargar publicaciones:', apiError);
       } else {
+        console.log('📰 Publicaciones cargadas:', data?.length);
+        console.log('📰 Autores:', data?.map(p => ({
+          id: p.usuario?.id_user,
+          nombre: p.usuario?.nombre
+        })));
         setPublicaciones(data || []);
       }
     } catch (err) {
@@ -100,8 +132,11 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
         tipoPublicacion = getMediaType(selectedFiles[0]);
       }
       
+      // Agregar prefijo [EVENTO] si es un evento
+      const contenidoFinal = isEventPost ? `[EVENTO]${newPostContent}` : newPostContent;
+      
       const { data, error: apiError } = await publicacionesService.create({
-        contenido: newPostContent,
+        contenido: contenidoFinal,
         tipo: tipoPublicacion,
         media_urls: mediaUrls
       });
@@ -135,6 +170,7 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
         setPublicaciones([data, ...publicaciones]);
         setNewPostContent('');
         setSelectedFiles([]);
+        setIsEventPost(false);
         
         // Mostrar mensaje de éxito
         setShowSuccessMessage(true);
@@ -214,23 +250,93 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
       fileInputRef.current.click();
     }
   };
-
-  // Cerrar modal con ESC
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === 'Escape' && showEventForm) setShowEventForm(false);
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [showEventForm]);
-
-  const titleRef = useRef(null);
-  // Autofocus en el título cuando se abre el modal
-  useEffect(() => {
-    if (showEventForm) {
-      setTimeout(() => titleRef.current && titleRef.current.focus(), 50);
+  
+  // Función para editar publicación desde la card
+  const handleEditPost = async (publicacionId) => {
+    if (!editContent.trim()) return;
+    
+    try {
+      const publicacion = publicaciones.find(p => p.id_publicacion === publicacionId);
+      const wasEvent = publicacion?.contenido && publicacion.contenido.startsWith('[EVENTO]');
+      const contenidoFinal = wasEvent ? `[EVENTO]${editContent}` : editContent;
+      
+      let mediaUrls = publicacion.media_urls || [];
+      
+      // Si hay nuevos archivos, subirlos
+      if (editFiles.length > 0) {
+        const uploadedUrls = await uploadFiles(editFiles, editFileType);
+        if (uploadedUrls && uploadedUrls.length > 0) {
+          mediaUrls = uploadedUrls;
+        }
+      }
+      
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://backend-social-f3ob.onrender.com/api/v1'}/publicaciones/${publicacionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('user-token')}`
+        },
+        body: JSON.stringify({ 
+          contenido: contenidoFinal,
+          media_urls: mediaUrls
+        })
+      });
+      
+      if (response.ok) {
+        // Actualizar localmente
+        setPublicaciones(prev => prev.map(pub => 
+          pub.id_publicacion === publicacionId 
+            ? { ...pub, contenido: contenidoFinal, media_urls: mediaUrls }
+            : pub
+        ));
+        setEditingPostId(null);
+        setEditContent('');
+        setEditFiles([]);
+        setShowSuccessMessage(true);
+        setTimeout(() => setShowSuccessMessage(false), 2000);
+      } else {
+        throw new Error('Error al actualizar');
+      }
+    } catch (error) {
+      console.error('Error al editar:', error);
+      setErrorText('Error al editar la publicación');
+      setShowErrorMessage(true);
+      setTimeout(() => setShowErrorMessage(false), 4000);
     }
-  }, [showEventForm]);
+  };
+  
+  // Función para eliminar publicación desde la card
+  const handleDeletePost = async () => {
+    if (!deletePostId) return;
+    
+    setDeletingPost(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://backend-social-f3ob.onrender.com/api/v1'}/publicaciones/${deletePostId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('user-token')}`
+        }
+      });
+      
+      if (response.ok) {
+        // Eliminar de la lista local
+        setPublicaciones(prev => prev.filter(pub => pub.id_publicacion !== deletePostId));
+        setShowDeleteModal(false);
+        setDeletePostId(null);
+        setShowSuccessMessage(true);
+        setTimeout(() => setShowSuccessMessage(false), 2000);
+      } else {
+        throw new Error('Error al eliminar');
+      }
+    } catch (error) {
+      console.error('Error al eliminar:', error);
+      setErrorText('Error al eliminar la publicación');
+      setShowErrorMessage(true);
+      setTimeout(() => setShowErrorMessage(false), 4000);
+    } finally {
+      setDeletingPost(false);
+    }
+  };
   
   // Manejador para seleccionar una publicación
   const handleSelectPublicacion = async (publicacion) => {
@@ -368,16 +474,18 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
               width: '40px',
               height: '40px',
               borderRadius: '50%',
-              background: `linear-gradient(145deg, ${theme.colors.primary}, ${theme.colors.primaryLight})`,
+              background: user?.foto_perfil ? `url(${user.foto_perfil}) center/cover` : `linear-gradient(145deg, ${theme.colors.primary}, ${theme.colors.primaryLight})`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '20px',
               fontWeight: 'bold',
               color: 'white',
-              flexShrink: 0
+              flexShrink: 0,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
             }}>
-              {user?.nombre?.[0]?.toUpperCase() || '👤'}
+              {!user?.foto_perfil && (user?.nombre?.[0]?.toUpperCase() || '👤')}
             </div>
             <div style={{ flex: 1 }}>
               <textarea 
@@ -446,6 +554,53 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
             </div>
           )}
           
+          {/* Checkbox para marcar como evento (solo admins y docentes) */}
+          {canCreateEvents() && (
+            <div style={{
+              marginTop: '8px',
+              padding: '8px 12px',
+              background: isEventPost ? `${theme.colors.primary}20` : 'transparent',
+              borderRadius: '8px',
+              border: `1px solid ${isEventPost ? theme.colors.primary : 'transparent'}`,
+              transition: 'all 0.3s ease'
+            }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: theme.colors.text
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isEventPost}
+                  onChange={(e) => setIsEventPost(e.target.checked)}
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    cursor: 'pointer',
+                    accentColor: theme.colors.primary
+                  }}
+                />
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📅 <span>Publicar como evento</span>
+                </span>
+              </label>
+              {isEventPost && (
+                <p style={{
+                  fontSize: '12px',
+                  color: theme.colors.textSecondary,
+                  marginTop: '6px',
+                  marginLeft: '26px'
+                }}>
+                  Esta publicación aparecerá en la pestaña de Eventos
+                </p>
+              )}
+            </div>
+          )}
+          
           <div className="new-post-actions" style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -453,12 +608,25 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
             paddingTop: '8px',
             borderTop: `1px solid ${theme.colors.primaryLight}20`
           }}>
-            {/* Input de archivo oculto */}
+            {/* Input de archivo oculto para nueva publicación */}
             <input 
               type="file"
               ref={fileInputRef}
               onChange={handleFileSelect}
               multiple
+              style={{ display: 'none' }}
+            />
+            
+            {/* Input de archivo oculto para edición */}
+            <input 
+              type="file"
+              ref={editFileInputRef}
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                if (files.length > 0) {
+                  setEditFiles(files);
+                }
+              }}
               style={{ display: 'none' }}
             />
             
@@ -598,16 +766,86 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
           </div>
         </div>
         
-        {/* Header de eventos: solo visible cuando activeTab === 'eventos' */}
-        {activeTab === 'eventos' && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Eventos</h3>
-            <button 
-              className="primary-button" 
-              style={{ background: `linear-gradient(145deg, ${theme.colors.primary}, ${theme.colors.primaryLight})` }}
-              onClick={() => setShowEventForm(true)}
+        {/* Sub-tabs para Populares */}
+        {activeTab === 'populares' && (
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            marginBottom: '16px',
+            padding: '8px',
+            background: `${theme.colors.cardBackground}40`,
+            borderRadius: '12px',
+            border: `1px solid ${theme.colors.primaryLight}20`
+          }}>
+            <button
+              onClick={() => setPopularSubTab('reacciones')}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                background: popularSubTab === 'reacciones' 
+                  ? `linear-gradient(145deg, ${theme.colors.primary}, ${theme.colors.primaryLight})`
+                  : 'transparent',
+                color: popularSubTab === 'reacciones' ? 'white' : 'rgba(255, 255, 255, 0.7)',
+                fontWeight: popularSubTab === 'reacciones' ? '600' : '500',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+              onMouseOver={(e) => {
+                if (popularSubTab !== 'reacciones') {
+                  e.currentTarget.style.background = `${theme.colors.primary}20`;
+                  e.currentTarget.style.color = 'white';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (popularSubTab !== 'reacciones') {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                }
+              }}
             >
-              Crear Evento
+              ❤️ Más Reaccionados
+            </button>
+            <button
+              onClick={() => setPopularSubTab('comentarios')}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                background: popularSubTab === 'comentarios' 
+                  ? `linear-gradient(145deg, ${theme.colors.primary}, ${theme.colors.primaryLight})`
+                  : 'transparent',
+                color: popularSubTab === 'comentarios' ? 'white' : 'rgba(255, 255, 255, 0.7)',
+                fontWeight: popularSubTab === 'comentarios' ? '600' : '500',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+              onMouseOver={(e) => {
+                if (popularSubTab !== 'comentarios') {
+                  e.currentTarget.style.background = `${theme.colors.primary}20`;
+                  e.currentTarget.style.color = 'white';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (popularSubTab !== 'comentarios') {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                }
+              }}
+            >
+              💬 Más Comentados
             </button>
           </div>
         )}
@@ -628,18 +866,78 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
               </button>
             </div>
           ) : activeTab !== 'eventos' ? (
-            publicaciones.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', gridColumn: '1 / -1' }}>
-                <p>No hay publicaciones aún. ¡Sé el primero en publicar!</p>
-              </div>
-            ) : (
-              publicaciones
+            (() => {
+              const filteredPublicaciones = publicaciones
                 .filter(publicacion => {
+                  // Excluir eventos de otras pestañas (solo mostrarlos en la pestaña Eventos)
+                  if (publicacion.contenido && publicacion.contenido.startsWith('[EVENTO]')) {
+                    return false;
+                  }
+                  
                   if (activeTab === 'recientes') return true;
-                  if (activeTab === 'populares') return (publicacion.reacciones_count || 0) >= 5;
-                  if (activeTab === 'amigos') return true; // TODO: implementar lógica de amigos
+                  if (activeTab === 'populares') {
+                    // Filtrar dinámicamente según el sub-tab seleccionado
+                    if (popularSubTab === 'reacciones') {
+                      return (publicacion.reacciones_count || 0) >= 1;
+                    } else if (popularSubTab === 'comentarios') {
+                      return (publicacion.comentarios_count || 0) >= 1;
+                    }
+                    return true;
+                  }
+                  if (activeTab === 'amigos') {
+                    // Obtener el id del autor de la publicación (puede estar en usuario.id_user o directamente en id_user)
+                    const autorId = publicacion.usuario?.id_user || publicacion.id_user;
+                    
+                    if (!autorId) {
+                      console.log('⚠️ Publicación sin id de autor:', publicacion);
+                      return false;
+                    }
+                    
+                    // Buscar si el id del autor está en la lista de amigos
+                    const idsAmigos = amigos.map(amigo => amigo.amigo?.id_user || amigo.id_user);
+                    const esAmigo = idsAmigos.includes(autorId);
+                    
+                    return esAmigo;
+                  }
                   return true;
                 })
+                .sort((a, b) => {
+                  // Ordenar por fecha (más recientes primero)
+                  if (activeTab === 'recientes') {
+                    return new Date(b.fecha_creacion) - new Date(a.fecha_creacion);
+                  }
+                  // Ordenar dinámicamente por reacciones o comentarios según el sub-tab
+                  if (activeTab === 'populares') {
+                    if (popularSubTab === 'reacciones') {
+                      return (b.reacciones_count || 0) - (a.reacciones_count || 0);
+                    } else if (popularSubTab === 'comentarios') {
+                      return (b.comentarios_count || 0) - (a.comentarios_count || 0);
+                    }
+                  }
+                  return 0;
+                });
+
+              if (filteredPublicaciones.length === 0) {
+                const messages = {
+                  recientes: '📝 No hay publicaciones aún. ¡Sé el primero en publicar!',
+                  populares: popularSubTab === 'reacciones' 
+                    ? '❤️ No hay publicaciones con reacciones todavía. ¡Sé el primero en reaccionar!' 
+                    : '💬 No hay publicaciones con comentarios todavía. ¡Sé el primero en comentar!',
+                  amigos: '👥 No hay publicaciones de tus amigos aún. ¡Agrega amigos para ver su contenido!'
+                };
+                return (
+                  <div style={{ textAlign: 'center', padding: '60px', gridColumn: '1 / -1' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>
+                      {activeTab === 'amigos' ? '👥' : activeTab === 'populares' ? (popularSubTab === 'reacciones' ? '❤️' : '💬') : '📝'}
+                    </div>
+                    <p style={{ fontSize: '16px', color: theme.colors.textSecondary }}>
+                      {messages[activeTab] || messages.recientes}
+                    </p>
+                  </div>
+                );
+              }
+
+              return filteredPublicaciones
                 .map((publicacion) => (
                   <div 
                     key={publicacion.id_publicacion} 
@@ -647,10 +945,11 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
                     onClick={() => handleSelectPublicacion(publicacion)}
                     style={{ 
                       width: '100%',
-                      background: `linear-gradient(145deg, ${theme.colors.primaryDark}30, ${theme.colors.primaryLight}20)`
+                      background: `linear-gradient(145deg, ${theme.colors.primaryDark}30, ${theme.colors.primaryLight}20)`,
+                      position: 'relative'
                     }}
                   >
-                  <div className="card-header">
+                  <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div className="user-info">
                       <div className="user-avatar">
                         <img 
@@ -658,15 +957,254 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
                           alt={publicacion.usuario?.nombre || 'Usuario'} 
                         />
                       </div>
-                      <div className="user-name">{publicacion.usuario?.nombre || 'Usuario'} {publicacion.usuario?.apellido || ''}</div>
+                      <div>
+                        <div className="user-name">{publicacion.usuario?.nombre || 'Usuario'} {publicacion.usuario?.apellido || ''}</div>
+                        <div className="publication-date">
+                          {new Date(publicacion.fecha_creacion).toLocaleDateString('es-ES')}
+                        </div>
+                      </div>
                     </div>
-                    <div className="publication-date">
-                      {new Date(publicacion.fecha_creacion).toLocaleDateString('es-ES')}
-                    </div>
+                    
+                    {/* Menú de opciones - solo para el dueño de la publicación */}
+                    {user && publicacion.id_user === user.id_user && (
+                      <div 
+                        className="post-options-menu"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ position: 'relative' }}
+                      >
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === publicacion.id_publicacion ? null : publicacion.id_publicacion)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#ffffff',
+                            fontSize: '20px',
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                            lineHeight: 1
+                          }}
+                          title="Opciones"
+                        >
+                          ⋮
+                        </button>
+                        
+                        {openMenuId === publicacion.id_publicacion && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: '0',
+                            marginTop: '4px',
+                            background: theme.colors.cardBackground,
+                            border: `1px solid ${theme.colors.primaryLight}40`,
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            overflow: 'hidden',
+                            zIndex: 100,
+                            minWidth: '140px'
+                          }}>
+                            <button
+                              onClick={() => {
+                                setEditingPostId(publicacion.id_publicacion);
+                                setEditContent((publicacion.contenido || '').replace('[EVENTO]', ''));
+                                setEditFiles([]);
+                                const hasMedia = publicacion.media_urls && publicacion.media_urls.length > 0;
+                                if (hasMedia) {
+                                  const firstUrl = publicacion.media_urls[0];
+                                  setEditFileType(getMediaType(firstUrl));
+                                }
+                                setOpenMenuId(null);
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '10px 14px',
+                                background: 'transparent',
+                                border: 'none',
+                                color: theme.colors.text,
+                                fontSize: '14px',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                transition: 'background 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = `${theme.colors.primary}20`}
+                              onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              onClick={() => {
+                                setDeletePostId(publicacion.id_publicacion);
+                                setShowDeleteModal(true);
+                                setOpenMenuId(null);
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '10px 14px',
+                                background: 'transparent',
+                                border: 'none',
+                                color: theme.colors.notification,
+                                fontSize: '14px',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                transition: 'background 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = `${theme.colors.notification}20`}
+                              onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                            >
+                              🗑️ Eliminar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="post-content">
-                    <p>{publicacion.contenido}</p>
+                    {editingPostId === publicacion.id_publicacion ? (
+                      <div onClick={(e) => e.stopPropagation()} style={{ padding: '12px 0' }}>
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          style={{
+                            width: '100%',
+                            minHeight: '100px',
+                            padding: '12px',
+                            fontSize: '15px',
+                            lineHeight: '1.6',
+                            color: theme.colors.text,
+                            background: theme.colors.cardBackground,
+                            border: `2px solid ${theme.colors.primary}`,
+                            borderRadius: '8px',
+                            resize: 'vertical',
+                            fontFamily: 'inherit'
+                          }}
+                          autoFocus
+                        />
+                        {/* Botones de cambio de archivo */}
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginTop: '8px',
+                          flexWrap: 'wrap'
+                        }}>
+                          <button
+                            onClick={() => {
+                              setEditFileType('imagen');
+                              if (editFileInputRef.current) {
+                                editFileInputRef.current.accept = 'image/*';
+                                editFileInputRef.current.click();
+                              }
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              background: theme.colors.cardBackground,
+                              color: theme.colors.primary,
+                              border: `1px solid ${theme.colors.primary}`,
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            📷 Cambiar Imagen
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditFileType('documento');
+                              if (editFileInputRef.current) {
+                                editFileInputRef.current.accept = '.pdf,.doc,.docx,.txt';
+                                editFileInputRef.current.click();
+                              }
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              background: theme.colors.cardBackground,
+                              color: theme.colors.primary,
+                              border: `1px solid ${theme.colors.primary}`,
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            📄 Cambiar Documento
+                          </button>
+                          {editFiles.length > 0 && (
+                            <button
+                              onClick={() => setEditFiles([])}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#ff4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ❌ Quitar archivo
+                            </button>
+                          )}
+                        </div>
+                        {editFiles.length > 0 && (
+                          <div style={{
+                            marginTop: '8px',
+                            padding: '8px',
+                            background: theme.colors.background,
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            color: theme.colors.textSecondary
+                          }}>
+                            ✅ Nuevo archivo: {editFiles[0].name}
+                          </div>
+                        )}
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginTop: '8px'
+                        }}>
+                          <button
+                            onClick={() => handleEditPost(publicacion.id_publicacion)}
+                            style={{
+                              padding: '8px 20px',
+                              background: `linear-gradient(145deg, ${theme.colors.primary}, ${theme.colors.primaryLight})`,
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingPostId(null);
+                              setEditContent('');
+                              setEditFiles([]);
+                            }}
+                            style={{
+                              padding: '6px 20px',
+                              background: theme.colors.textSecondary,
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p>{(publicacion.contenido || '').replace('[EVENTO]', '')}</p>
+                    )}
                     
                     {/* Mostrar media desde el array media[] o desde media_urls[] */}
                     {((publicacion.media && publicacion.media.length > 0) || (publicacion.media_urls && publicacion.media_urls.length > 0)) && (
@@ -852,13 +1390,13 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
                           {[
                             { emoji: '👍', name: 'like' },
                             { emoji: '❤️', name: 'love' },
-                            { emoji: '😂', name: 'wow' },
+                            { emoji: '😂', name: 'laugh' },
                             { emoji: '😮', name: 'wow' },
                             { emoji: '😢', name: 'sad' },
                             { emoji: '😠', name: 'angry' }
-                          ].map((reaction) => (
+                          ].map((reaction, index) => (
                             <button
-                              key={reaction.name}
+                              key={`${reaction.name}-${index}`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleReaccion(publicacion.id_publicacion, reaction.name);
@@ -912,85 +1450,184 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
                     </div>
                   </div>
                 </div>
-              ))
-            )
+              ));
+            })()
           ) : (
             // Renderizar eventos cuando la pestaña activa es 'eventos'
-            <>
-              {eventos.length === 0 && <div>No hay eventos programados.</div>}
-              {eventos.map(ev => (
-                <div key={ev.id} className="collection-card event-card" onClick={() => handleSelectEvent(ev)}>
-                  <div className="event-card-header">
-                    <div className="event-icon">📅</div>
-                    <div className="event-badge">Evento</div>
+            (() => {
+              // Filtrar publicaciones que sean eventos (tienen prefijo [EVENTO])
+              const eventosPublicaciones = publicaciones.filter(pub => 
+                pub.contenido && pub.contenido.startsWith('[EVENTO]')
+              );
+              
+              if (eventosPublicaciones.length === 0) {
+                return (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '60px', 
+                    gridColumn: '1 / -1',
+                    background: `${theme.colors.cardBackground}40`,
+                    borderRadius: '16px',
+                    border: `2px dashed ${theme.colors.primaryLight}40`
+                  }}>
+                    <div style={{ fontSize: '64px', marginBottom: '16px' }}>📅</div>
+                    <h3 style={{ fontSize: '20px', marginBottom: '12px', color: theme.colors.text }}>
+                      No hay eventos programados
+                    </h3>
+                    <p style={{ fontSize: '14px', color: theme.colors.textSecondary, marginBottom: '20px' }}>
+                      {canCreateEvents() 
+                        ? '¡Marca tu próxima publicación como evento para que aparezca aquí!' 
+                        : 'Los eventos serán publicados por administradores y profesores.'}
+                    </p>
                   </div>
-                  
-                  <div className="event-card-body">
-                    <h4 className="event-title">{ev.titulo}</h4>
+                );
+              }
+              
+              // Renderizar cada evento (publicación con prefijo [EVENTO])
+              return eventosPublicaciones.map((publicacion) => {
+                // Remover el prefijo [EVENTO] para mostrarlo limpio
+                const contenidoLimpio = publicacion.contenido.replace('[EVENTO]', '').trim();
+                
+                return (
+                  <div 
+                    key={publicacion.id_publicacion} 
+                    className="collection-card event-card" 
+                    onClick={() => handleSelectPublicacion(publicacion)}
+                    style={{ 
+                      width: '100%',
+                      background: `linear-gradient(145deg, ${theme.colors.primary}40, ${theme.colors.primaryLight}30)`,
+                      border: `2px solid ${theme.colors.primary}60`
+                    }}
+                  >
+                    <div className="event-card-header" style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      marginBottom: '12px'
+                    }}>
+                      <div className="event-icon" style={{ fontSize: '32px' }}>📅</div>
+                      <div className="event-badge" style={{
+                        background: theme.colors.primary,
+                        color: 'white',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>Evento</div>
+                    </div>
                     
-                    <div className="event-details">
-                      <div className="event-detail-item">
-                        <span className="event-detail-icon">🕒</span>
-                        <span className="event-detail-text">{new Date(ev.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })} • {new Date(ev.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      <div className="event-detail-item">
-                        <span className="event-detail-icon">📍</span>
-                        <span className="event-detail-text">{ev.lugar}</span>
+                    <div className="card-header">
+                      <div className="user-info">
+                        <div className="user-avatar">
+                          <img 
+                            src={publicacion.usuario?.foto_perfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(publicacion.usuario?.nombre || 'U')}&background=random`} 
+                            alt={publicacion.usuario?.nombre || 'Usuario'} 
+                          />
+                        </div>
+                        <div>
+                          <div className="user-name">{publicacion.usuario?.nombre || 'Usuario'} {publicacion.usuario?.apellido || ''}</div>
+                          <div className="post-time">
+                            {new Date(publicacion.fecha_creacion).toLocaleDateString('es-ES', { 
+                              day: 'numeric', 
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
-                    <p className="event-description">{ev.descripcion}</p>
-                  </div>
-                  
-                  <div className="event-card-footer">
-                    <div className="event-organizer">
-                      <div className="event-organizer-avatar">
-                        {(ev.organizador || 'O')[0].toUpperCase()}
-                      </div>
-                      <div className="event-organizer-info">
-                        <span className="event-organizer-label">Organiza</span>
-                        <span className="event-organizer-name">{ev.organizador || 'Universidad'}</span>
+                    <div className="card-body">
+                      <p style={{ 
+                        fontSize: '15px', 
+                        lineHeight: '1.5',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                      }}>
+                        {contenidoLimpio}
+                      </p>
+                      
+                      {publicacion.media && publicacion.media.length > 0 && (
+                        <div style={{ 
+                          marginTop: '12px',
+                          display: 'grid',
+                          gap: '8px',
+                          gridTemplateColumns: publicacion.media.length === 1 ? '1fr' : 'repeat(2, 1fr)'
+                        }}>
+                          {publicacion.media.slice(0, 4).map((media, idx) => (
+                            <div key={idx}>
+                              {media.url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
+                                <img 
+                                  src={media.url} 
+                                  alt={`Media ${idx + 1}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '150px',
+                                    objectFit: 'cover',
+                                    borderRadius: '8px'
+                                  }}
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="card-footer">
+                      <div className="post-actions" style={{
+                        display: 'flex',
+                        gap: '16px',
+                        padding: '12px 0',
+                        borderTop: `1px solid ${theme.colors.primaryLight}20`
+                      }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReaccion(publicacion.id_publicacion);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            color: theme.colors.text,
+                            fontSize: '14px',
+                            padding: '6px 12px',
+                            borderRadius: '8px'
+                          }}
+                        >
+                          👍 <span style={{ fontSize: '13px', fontWeight: '500' }}>{publicacion.reacciones_count || 0}</span>
+                        </button>
+                        <button
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            color: theme.colors.text,
+                            fontSize: '14px',
+                            padding: '6px 12px',
+                            borderRadius: '8px'
+                          }}
+                        >
+                          💬 <span style={{ fontSize: '13px', fontWeight: '500' }}>{publicacion.comentarios_count || 0}</span>
+                        </button>
                       </div>
                     </div>
-                    <button className="event-comment-btn" onClick={(e) => { e.stopPropagation(); handleSelectEvent(ev); }}>
-                      💬
-                    </button>
                   </div>
-                </div>
-              ))}
-            </>
+                );
+              });
+            })()
           )}
         </div>
       </div>
-      
-      {/* Modal para crear evento - fuera del grid */}
-      {showEventForm && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={(e) => { if (e.target === e.currentTarget) setShowEventForm(false); }}>
-          <div className="modal-content new-event-modal" style={{ maxWidth: 720, width: '95%', margin: '40px auto', padding: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Crear Evento</h3>
-              <button className="modal-close" aria-label="Cerrar" onClick={() => setShowEventForm(false)}>×</button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
-              <input ref={titleRef} type="text" placeholder="Título del evento" value={newEvent.titulo} onChange={e => setNewEvent({...newEvent, titulo: e.target.value})} style={{ width: '100%' }} />
-              <input type="datetime-local" placeholder="Fecha y hora" value={newEvent.fecha} onChange={e => setNewEvent({...newEvent, fecha: e.target.value})} style={{ width: '100%' }} />
-              <input type="text" placeholder="Lugar" value={newEvent.lugar} onChange={e => setNewEvent({...newEvent, lugar: e.target.value})} style={{ width: '100%' }} />
-              <textarea placeholder="Descripción" value={newEvent.descripcion} onChange={e => setNewEvent({...newEvent, descripcion: e.target.value})} style={{ width: '100%' }} />
-            </div>
-
-            <div style={{ textAlign: 'right', marginTop: 12 }}>
-              <button className="post-button" onClick={() => {
-                if (!newEvent.titulo || !newEvent.fecha) return alert('Completa título y fecha');
-                const ev = { ...newEvent, id: `ev${Date.now()}` };
-                setEventos(prev => [ev, ...prev]);
-                setNewEvent({ titulo: '', descripcion: '', fecha: '', lugar: '' });
-                setShowEventForm(false);
-              }} style={{ background: `linear-gradient(145deg, ${theme.colors.primary}, ${theme.colors.primaryLight})` }}>Guardar Evento</button>
-            </div>
-          </div>
-        </div>
-      )}
       
       {selectedItem && (
         <DetailPanel 
@@ -1006,6 +1643,103 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
             );
           }}
         />
+      )}
+      
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001,
+          padding: '20px'
+        }}
+        onClick={() => !deletingPost && setShowDeleteModal(false)}
+        >
+          <div style={{
+            background: theme.colors.cardBackground,
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '440px',
+            width: '100%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            border: `1px solid ${theme.colors.primaryLight}40`
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              fontSize: '48px',
+              textAlign: 'center',
+              marginBottom: '20px'
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{
+              fontSize: '22px',
+              fontWeight: '700',
+              color: theme.colors.text,
+              textAlign: 'center',
+              marginBottom: '12px'
+            }}>
+              Eliminar publicación
+            </h3>
+            <p style={{
+              fontSize: '16px',
+              color: theme.colors.textSecondary,
+              textAlign: 'center',
+              marginBottom: '32px',
+              lineHeight: '1.5'
+            }}>
+              ¿Estás seguro que quieres eliminar esta publicación? Esta acción no se puede deshacer.
+            </p>
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deletingPost}
+                style={{
+                  padding: '12px 32px',
+                  background: theme.colors.textSecondary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: deletingPost ? 'not-allowed' : 'pointer',
+                  opacity: deletingPost ? 0.5 : 1
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeletePost}
+                disabled={deletingPost}
+                style={{
+                  padding: '12px 32px',
+                  background: deletingPost ? theme.colors.textSecondary : 'linear-gradient(145deg, #ef4444, #f87171)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: deletingPost ? 'not-allowed' : 'pointer',
+                  opacity: deletingPost ? 0.7 : 1
+                }}
+              >
+                {deletingPost ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

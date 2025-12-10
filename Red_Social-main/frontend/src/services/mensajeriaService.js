@@ -101,6 +101,22 @@ const mensajeriaService = {
   },
 
   /**
+   * Marcar todos los mensajes de una conversación como leídos
+   */
+  marcarMensajesLeidos: async (idConversacion) => {
+    try {
+      const response = await apiService.put(`/mensajes/conversacion/${idConversacion}/leer`);
+      return { data: response.data, error: null };
+    } catch (error) {
+      console.error('Error marcando mensajes como leídos:', error);
+      return { 
+        data: null, 
+        error: error.response?.data?.detail || error.message 
+      };
+    }
+  },
+
+  /**
    * Buscar usuarios para iniciar conversación
    */
   buscarUsuarios: async (query) => {

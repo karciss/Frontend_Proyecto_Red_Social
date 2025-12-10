@@ -55,8 +55,13 @@ const Sidebar = ({ onModuleChange, activeModule: externalActiveModule }) => {
             className="profile-avatar"
             onClick={toggleProfile}
             title="Ver perfil"
+            style={{
+              background: user?.foto_perfil ? `url(${user.foto_perfil}) center/cover` : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
           >
-            {user?.nombre ? user.nombre.charAt(0).toUpperCase() + (user?.apellido ? user.apellido.charAt(0).toUpperCase() : '') : 'U'}
+            {!user?.foto_perfil && (user?.nombre ? user.nombre.charAt(0).toUpperCase() + (user?.apellido ? user.apellido.charAt(0).toUpperCase() : '') : 'U')}
           </div>
         </div>
       </div>

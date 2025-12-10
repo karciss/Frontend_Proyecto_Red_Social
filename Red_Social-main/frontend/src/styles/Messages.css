@@ -7,12 +7,13 @@
 
 .message-card {
   border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   padding: 15px;
   transition: transform 0.2s ease, box-shadow 0.3s ease;
   cursor: pointer;
-  background-color: rgba(40, 44, 52, 0.6) !important;
+  background: #2a2d35 !important;
   margin-bottom: 8px;
+  border: 1px solid rgba(139, 30, 65, 0.2);
 }
 
 .message-card:hover {
@@ -113,10 +114,9 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: calc(100vh - 220px);
-  overflow-y: auto;
-  padding: 15px;
-  padding-right: 10px;
+  /* Eliminar max-height y overflow para que use el scroll del contenedor padre */
+  padding: 0;
+  min-height: 100%;
 }
 
 .message-day-divider {
@@ -146,12 +146,13 @@
 }
 
 .message-bubble {
-  max-width: 75%;
-  padding: 10px 15px;
+  max-width: 85%;
+  padding: 12px 18px;
   border-radius: 18px;
   position: relative;
   word-wrap: break-word;
   margin: 4px 0;
+  min-width: 120px;
 }
 
 .message-bubble.sent {
@@ -164,9 +165,10 @@
 
 .message-bubble.received {
   align-self: flex-start;
-  background-color: rgba(255, 255, 255, 0.1);
+  background: #2d3038;
   border-bottom-left-radius: 5px;
   margin-right: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .message-sender {
@@ -201,11 +203,14 @@
   align-items: center;
   gap: 10px;
   padding: 15px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(180deg, rgba(30, 30, 35, 0.95) 0%, rgba(25, 25, 30, 0.98) 100%);
-  position: sticky;
+  border-top: 1px solid rgba(139, 30, 65, 0.5);
+  background: #000000;
+  position: relative;
   bottom: 0;
-  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 10;
 }
 
 .emoji-button {
@@ -323,4 +328,47 @@
 
 .emoji-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
+}
+/* Estilos para el scroll personalizado */
+.message-grid::-webkit-scrollbar,
+.messages-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.message-grid::-webkit-scrollbar-track,
+.messages-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.message-grid::-webkit-scrollbar-thumb,
+.messages-container::-webkit-scrollbar-thumb {
+  background: rgba(139, 30, 65, 0.6);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.message-grid::-webkit-scrollbar-thumb:hover,
+.messages-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 30, 65, 0.8);
+}
+
+/* Scroll para lista de b�squeda de usuarios */
+.users-search-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.users-search-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.users-search-list::-webkit-scrollbar-thumb {
+  background: rgba(139, 30, 65, 0.6);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.users-search-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 30, 65, 0.8);
 }

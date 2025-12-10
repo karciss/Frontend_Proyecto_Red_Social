@@ -189,6 +189,15 @@ export const AuthProvider = ({ children }) => {
   // Aliases para compatibilidad con código existente
   const logout = signOut;
   const signIn = login;
+  
+  // Función para actualizar el usuario localmente
+  const updateUser = (updatedUserData) => {
+    const updatedUser = { ...user, ...updatedUserData };
+    setUser(updatedUser);
+    // Guardar en las dos claves para compatibilidad
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    localStorage.setItem('user-data', JSON.stringify(updatedUser));
+  };
 
   // Valor que se proporciona al contexto
   const value = {
@@ -209,6 +218,7 @@ export const AuthProvider = ({ children }) => {
     // Métodos auxiliares
     refreshToken,
     refreshUser,
+    updateUser,
     
     // Limpiar error
     clearError: () => setError(null),

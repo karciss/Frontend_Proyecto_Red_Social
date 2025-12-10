@@ -965,7 +965,7 @@ const AdminUsersPanel = () => {
             </h2>
             <form onSubmit={handleCreateUser}>
               {editingUser && (
-                <div style={{ marginBottom: '15px' }}>
+                <div style={{ marginBottom: '18px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
                     CI
                   </label>
@@ -990,7 +990,7 @@ const AdminUsersPanel = () => {
                 </div>
               )}
 
-              <div style={{ marginBottom: '15px' }}>
+              <div style={{ marginBottom: '18px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
                   Nombre *
                 </label>
@@ -1003,7 +1003,7 @@ const AdminUsersPanel = () => {
                     width: '100%',
                     padding: '12px',
                     borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    border: `1px solid ${theme.colors.primaryLight}50`,
                     background: 'rgba(255,255,255,0.08)',
                     color: '#ffffff',
                     fontSize: '14px'
@@ -1011,7 +1011,7 @@ const AdminUsersPanel = () => {
                 />
               </div>
 
-              <div style={{ marginBottom: '15px' }}>
+              <div style={{ marginBottom: '18px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
                   Apellido *
                 </label>
@@ -1024,7 +1024,7 @@ const AdminUsersPanel = () => {
                     width: '100%',
                     padding: '12px',
                     borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    border: `1px solid ${theme.colors.primaryLight}50`,
                     background: 'rgba(255,255,255,0.08)',
                     color: '#ffffff',
                     fontSize: '14px'
@@ -1032,7 +1032,7 @@ const AdminUsersPanel = () => {
                 />
               </div>
 
-              <div style={{ marginBottom: '15px' }}>
+              <div style={{ marginBottom: '18px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
                   Correo *
                 </label>
@@ -1045,7 +1045,7 @@ const AdminUsersPanel = () => {
                     width: '100%',
                     padding: '12px',
                     borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    border: `1px solid ${theme.colors.primaryLight}50`,
                     background: 'rgba(255,255,255,0.08)',
                     color: '#ffffff',
                     fontSize: '14px'
@@ -1053,7 +1053,7 @@ const AdminUsersPanel = () => {
                 />
               </div>
 
-              <div style={{ marginBottom: '15px' }}>
+              <div style={{ marginBottom: '18px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
                   Contraseña {editingUser ? '(dejar vacío para no cambiar)' : '*'}
                 </label>
@@ -1067,7 +1067,7 @@ const AdminUsersPanel = () => {
                     width: '100%',
                     padding: '12px',
                     borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    border: `1px solid ${theme.colors.primaryLight}50`,
                     background: 'rgba(255,255,255,0.08)',
                     color: '#ffffff',
                     fontSize: '14px'
@@ -1075,7 +1075,7 @@ const AdminUsersPanel = () => {
                 />
               </div>
 
-              <div style={{ marginBottom: '15px' }}>
+              <div style={{ marginBottom: '18px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#ffffff', fontSize: '14px' }}>
                   Rol *
                 </label>
@@ -1119,7 +1119,7 @@ const AdminUsersPanel = () => {
                     width: '100%',
                     padding: '12px',
                     borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    border: `1px solid ${theme.colors.primaryLight}50`,
                     background: editingUser ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)',
                     color: '#ffffff',
                     cursor: editingUser ? 'not-allowed' : 'pointer',
@@ -1130,12 +1130,16 @@ const AdminUsersPanel = () => {
                   <option value="estudiante" style={{ background: '#1a1a2e', color: '#ffffff' }}>Estudiante</option>
                   <option value="docente" style={{ background: '#1a1a2e', color: '#ffffff' }}>Docente</option>
                 </select>
-                {!editingUser && (
-                  <small style={{ display: 'block', marginTop: '8px', opacity: 0.8, color: '#ffd700', fontSize: '12px' }}>
-                    💡 Si seleccionas Estudiante o Docente, se abrirá el formulario completo con todos los campos necesarios.
-                  </small>
-                )}
               </div>
+
+              {!editingUser && (
+                <div style={{ background: `${theme.colors.primaryLight}20`, padding: '12px', borderRadius: '8px', marginBottom: '20px', border: `1px solid ${theme.colors.primaryLight}50` }}>
+                  <p style={{ fontSize: '13px', color: theme.colors.primaryLight, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px' }}>💡</span>
+                    Si seleccionas Estudiante o Docente, se abrirá el formulario completo con todos los campos necesarios.
+                  </p>
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '25px' }}>
                 <button
@@ -1167,7 +1171,7 @@ const AdminUsersPanel = () => {
                   disabled={loading || (!editingUser && userForm.rol !== 'administrador')}
                   style={{
                     padding: '12px 24px',
-                    background: (loading || (!editingUser && userForm.rol !== 'administrador')) ? 'rgba(76, 175, 80, 0.3)' : '#4CAF50',
+                    background: (loading || (!editingUser && userForm.rol !== 'administrador')) ? `${theme.colors.primary}60` : theme.colors.primary,
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -1178,12 +1182,12 @@ const AdminUsersPanel = () => {
                   }}
                   onMouseOver={(e) => {
                     if (!loading && (editingUser || userForm.rol === 'administrador')) {
-                      e.target.style.background = '#45a049';
+                      e.target.style.background = `${theme.colors.primaryDark}`;
                     }
                   }}
                   onMouseOut={(e) => {
                     if (!loading && (editingUser || userForm.rol === 'administrador')) {
-                      e.target.style.background = '#4CAF50';
+                      e.target.style.background = theme.colors.primary;
                     }
                   }}
                 >

@@ -33,6 +33,9 @@ const UserProfileButton = () => {
         height: '60px',
         borderRadius: '50%',
         backgroundColor: theme.colors.primary || '#E75A7C',
+        background: user?.foto_perfil ? `url(${user.foto_perfil}) center/cover` : theme.colors.primary || '#E75A7C',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -56,7 +59,7 @@ const UserProfileButton = () => {
         e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
       }}
     >
-      {getUserInitials()}
+      {!user?.foto_perfil && getUserInitials()}
     </div>
   );
 };

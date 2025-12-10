@@ -5,17 +5,38 @@
   height: 100vh;
   max-height: 100vh;
   overflow: hidden;
-  position: relative;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 400px;
+  z-index: 100;
+  background: #000000 !important;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.8);
+  border-left: 2px solid rgba(139, 30, 65, 0.5);
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .detail-content {
   flex: 1;
-  padding: 15px 20px 20px;
+  padding: 15px 20px 80px 20px;
   overflow-y: auto !important;
   overflow-x: hidden;
   min-height: 0;
   scrollbar-width: thin;
-  scrollbar-color: rgba(212, 93, 126, 0.6) rgba(255, 255, 255, 0.05);
+  scrollbar-color: rgba(139, 30, 65, 0.8) rgba(255, 255, 255, 0.05);
+  scroll-behavior: smooth;
+  background: #000000 !important;
 }
 
 .detail-content::-webkit-scrollbar {
@@ -37,16 +58,19 @@
 }
 
 .item-image {
-  max-height: 280px;
+  max-height: 350px;
   margin-bottom: 15px;
   border-radius: 10px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .item-image img {
   width: 100%;
-  height: 100%;
+  height: auto;
+  max-height: 350px;
   object-fit: cover;
+  display: block;
 }
 
 .item-info {
@@ -72,8 +96,9 @@
 }
 
 .history-section {
-  padding: 0 20px 10px;
+  padding: 0 20px 20px;
   position: relative;
+  margin-bottom: 20px;
 }
 
 .comments-divider {
@@ -196,7 +221,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 15px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(139, 30, 65, 0.5);
+  background: #000000;
+  flex-shrink: 0;
 }
 
 .user-detail {

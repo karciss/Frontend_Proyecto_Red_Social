@@ -5,6 +5,18 @@ import mensajeriaService from '../services/mensajeriaService';
 import DetailPanel from './DetailPanel';
 import '../styles/Messages.css';
 
+// Función para formatear hora en Bolivia (UTC-4)
+const formatBoliviaTime = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('es-ES', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'America/La_Paz'
+  });
+};
+
 const MessagesModule = ({ onSelectItem, selectedItem }) => {
   const { theme } = useTheme();
   const { user } = useAuth();
@@ -139,7 +151,25 @@ const MessagesModule = ({ onSelectItem, selectedItem }) => {
   };
 
   // Manejador para seleccionar una conversación
-  const handleSelectConversacion = (conversacion) => {
+  const handleSelectConversacion = async (conversacion) => {
+    // Marcar mensajes como leídos inmediatamente en el estado local
+    if (conversacion.mensajes_no_leidos > 0) {
+      setConversaciones(prevConversaciones => 
+        prevConversaciones.map(conv => 
+          conv.id_conversacion === conversacion.id_conversacion 
+            ? { ...conv, mensajes_no_leidos: 0 }
+            : conv
+        )
+      );
+      
+      // Marcar como leídos en el backend
+      try {
+        await mensajeriaService.marcarMensajesLeidos(conversacion.id_conversacion);
+      } catch (error) {
+        console.error('Error marcando mensajes como leídos:', error);
+      }
+    }
+    
     // Determinar participante para conversaciones privadas
     const otroParticipante = conversacion.es_grupal || conversacion.tipo === 'grupal' ? null : 
       (conversacion.participantes && conversacion.participantes.length > 0 ? conversacion.participantes[0] : null);
@@ -427,8 +457,9 @@ const MessagesModule = ({ onSelectItem, selectedItem }) => {
               
               <div style={{
                 maxHeight: '300px',
-                overflowY: 'auto'
-              }}>
+                overflowY: 'auto',
+                paddingRight: '8px'
+              }} className="users-search-list">
                 {usuariosEncontrados.map(usuario => {
                   const yaSeleccionado = usuariosSeleccionados.find(u => u.id_user === usuario.id_user);
                   return (
@@ -722,11 +753,7 @@ const MessagesModule = ({ onSelectItem, selectedItem }) => {
                             color: theme.colors.textSecondary
                           }}>
                             {conversacion.ultimo_mensaje?.fecha_envio ? 
-                              new Date(conversacion.ultimo_mensaje.fecha_envio).toLocaleTimeString('es-ES', { 
-                                hour: '2-digit', 
-                                minute: '2-digit',
-                                hour12: false
-                              }) : 
+                              formatBoliviaTime(conversacion.ultimo_mensaje.fecha_envio) : 
                               ''
                             }
                           </div>

@@ -108,7 +108,29 @@ body {
   display: flex;
   padding: 20px;
   gap: 20px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 100vh;
+}
+
+/* Scrollbar personalizado para main-content */
+.main-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: rgba(139, 30, 65, 0.6);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 30, 65, 0.8);
 }
 
 /* Sección de colecciones */
@@ -116,12 +138,33 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 520px;
+  padding-right: 10px;
 }
+
+/* Scrollbar para collections-section */
+.collections-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.collections-section::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.collections-section::-webkit-scrollbar-thumb {
+  background: rgba(139, 30, 65, 0.6);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.collections-section::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 30, 65, 0.8);
+}
+
 /* Evitar que la sección principal se reduzca demasiado cuando aparece el panel de detalle */
-.collections-section {
-  min-width: 520px; /* impide colapsos extremos en pantallas grandes */
-}
 
 .collections-header {
   display: flex;

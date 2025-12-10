@@ -27,14 +27,32 @@ const UserProfileModuleNew = ({ onClose }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [amigos, setAmigos] = useState([]);
   const [loadingAmigos, setLoadingAmigos] = useState(false);
+  const [publicaciones, setPublicaciones] = useState([]);
+  const [loadingPublicaciones, setLoadingPublicaciones] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Cargar amigos cuando se monta el componente o cuando se selecciona la pestaña
+  // Cargar amigos y publicaciones cuando se monta el componente
   useEffect(() => {
     cargarAmigos();
+    cargarPublicaciones();
   }, []);
+
+  // Sincronizar userData con el contexto user cuando cambie
+  useEffect(() => {
+    if (user) {
+      setUserData({
+        nombre: user.nombre || 'Usuario de Prueba',
+        apellido: user.apellido || '',
+        correo: user.correo || 'usuario@ejemplo.com',
+        rol: user.rol || 'estudiante',
+        carrera: user.carrera || 'Informática',
+        semestre: user.semestre || '5',
+        foto_perfil: user.foto_perfil || null
+      });
+    }
+  }, [user, user?.foto_perfil]);
 
   const cargarAmigos = async () => {
     try {
@@ -67,6 +85,31 @@ const UserProfileModuleNew = ({ onClose }) => {
       setAmigos([]);
     } finally {
       setLoadingAmigos(false);
+    }
+  };
+
+  const cargarPublicaciones = async () => {
+    try {
+      setLoadingPublicaciones(true);
+      const token = localStorage.getItem('user-token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://backend-social-f3ob.onrender.com/api/v1'}/publicaciones?skip=0&limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Filtrar solo las publicaciones del usuario actual
+        const misPublicaciones = data.filter(pub => pub.id_user === user?.id_user);
+        console.log('📰 Mis publicaciones:', misPublicaciones);
+        setPublicaciones(misPublicaciones);
+      }
+    } catch (error) {
+      console.error('Error al cargar publicaciones:', error);
+      setPublicaciones([]);
+    } finally {
+      setLoadingPublicaciones(false);
     }
   };
 
@@ -178,21 +221,9 @@ const UserProfileModuleNew = ({ onClose }) => {
   }
 
   return (
-    <div className="user-profile-container-new">{/* Input oculto para seleccionar foto */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: 'none' }}
-        onChange={handlePhotoChange}
-      />
-      
+    <div className="user-profile-container-new">
       {/* Sección superior con gradiente de color institucional */}
       <div className="profile-header-new">
-        <div className="camera-icon" onClick={handleCameraClick} style={{ cursor: 'pointer' }}>
-          📷
-        </div>
-        
         <div className="search-bar-new">
           <div className="search-dot"></div>
           <input type="text" placeholder="Buscar..." />
@@ -233,59 +264,65 @@ const UserProfileModuleNew = ({ onClose }) => {
         <div className="tab-content">
           {activeTab === 'publicaciones' && (
             <div className="publicaciones-content">
-              <div className="post-item">
-                <div className="post-header">
-                  <div className="post-avatar">{getUserInitials()}</div>
-                  <div className="post-info">
-                    <div className="post-author">{`${userData.nombre} ${userData.apellido}`}</div>
-                    <div className="post-time">Hace 2 horas</div>
-                  </div>
+              {loadingPublicaciones ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: theme.colors.textSecondary }}>
+                  <div style={{ fontSize: '40px', marginBottom: '16px' }}>⏳</div>
+                  <div>Cargando publicaciones...</div>
                 </div>
-                <div className="post-content">
-                  Ejemplo de publicación en la red social universitaria. ¡Compartiendo conocimientos con mis compañeros!
+              ) : publicaciones.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: theme.colors.textSecondary }}>
+                  <div style={{ fontSize: '60px', marginBottom: '16px' }}>📝</div>
+                  <div>No has creado publicaciones aún</div>
+                  <div style={{ fontSize: '14px', marginTop: '8px' }}>Comparte algo con tus compañeros</div>
                 </div>
-                <div className="post-actions">
-                  <button className="post-action-btn">👍 Like</button>
-                  <button className="post-action-btn">💬 Comentar</button>
-                  <button className="post-action-btn">↗️ Compartir</button>
-                </div>
-              </div>
-              
-              <div className="post-item">
-                <div className="post-header">
-                  <div className="post-avatar">{getUserInitials()}</div>
-                  <div className="post-info">
-                    <div className="post-author">{`${userData.nombre} ${userData.apellido}`}</div>
-                    <div className="post-time">Hace 5 horas</div>
-                  </div>
-                </div>
-                <div className="post-content">
-                  ¡Acabo de encontrar un excelente recurso para preparar el examen de Bases de Datos! ¿Alguien más está estudiando para el parcial? #estudiando #informatica
-                </div>
-                <div className="post-actions">
-                  <button className="post-action-btn">👍 Like</button>
-                  <button className="post-action-btn">💬 Comentar</button>
-                  <button className="post-action-btn">↗️ Compartir</button>
-                </div>
-              </div>
-              
-              <div className="post-item">
-                <div className="post-header">
-                  <div className="post-avatar">{getUserInitials()}</div>
-                  <div className="post-info">
-                    <div className="post-author">{`${userData.nombre} ${userData.apellido}`}</div>
-                    <div className="post-time">Hace 1 día</div>
-                  </div>
-                </div>
-                <div className="post-content">
-                  Buscando compañeros para el proyecto final de Ingeniería de Software. Necesitamos 2 personas más que sepan React y Node.js. Interesados escriban en comentarios.
-                </div>
-                <div className="post-actions">
-                  <button className="post-action-btn">👍 Like</button>
-                  <button className="post-action-btn">💬 Comentar</button>
-                  <button className="post-action-btn">↗️ Compartir</button>
-                </div>
-              </div>
+              ) : (
+                publicaciones.map((publicacion) => {
+                  const fecha = new Date(publicacion.fecha_publicacion);
+                  const ahora = new Date();
+                  const diffMs = ahora - fecha;
+                  const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+                  const diffDias = Math.floor(diffHoras / 24);
+                  
+                  let tiempoTexto = '';
+                  if (diffDias > 0) {
+                    tiempoTexto = `Hace ${diffDias} día${diffDias > 1 ? 's' : ''}`;
+                  } else if (diffHoras > 0) {
+                    tiempoTexto = `Hace ${diffHoras} hora${diffHoras > 1 ? 's' : ''}`;
+                  } else {
+                    const diffMinutos = Math.floor(diffMs / (1000 * 60));
+                    tiempoTexto = `Hace ${diffMinutos || 1} minuto${diffMinutos > 1 ? 's' : ''}`;
+                  }
+                  
+                  return (
+                    <div key={publicacion.id_publicacion} className="post-item">
+                      <div className="post-header">
+                        <div className="post-avatar">{getUserInitials()}</div>
+                        <div className="post-info">
+                          <div className="post-author">{`${userData.nombre} ${userData.apellido}`}</div>
+                          <div className="post-time">{tiempoTexto}</div>
+                        </div>
+                      </div>
+                      <div className="post-content">
+                        {(publicacion.contenido || '').replace('[EVENTO]', '')}
+                      </div>
+                      {publicacion.media_urls && publicacion.media_urls.length > 0 && (
+                        <div style={{ marginTop: '12px', borderRadius: '8px', overflow: 'hidden' }}>
+                          <img 
+                            src={publicacion.media_urls[0]} 
+                            alt="Imagen de publicación" 
+                            style={{ width: '100%', maxHeight: '400px', objectFit: 'cover' }}
+                          />
+                        </div>
+                      )}
+                      <div className="post-actions">
+                        <button className="post-action-btn">👍 {publicacion.total_reacciones || 0}</button>
+                        <button className="post-action-btn">💬 {publicacion.total_comentarios || 0}</button>
+                        <button className="post-action-btn">↗️ Compartir</button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           )}
           
@@ -401,13 +438,6 @@ const UserProfileModuleNew = ({ onClose }) => {
                 }}>
                   <div className="menu-item-icon">👤</div>
                   <div className="menu-item-text">Editar perfil</div>
-                </div>
-                <div className="menu-item" onClick={() => {
-                  setMenuVisible(false);
-                  setShowSettings(true);
-                }}>
-                  <div className="menu-item-icon">🔒</div>
-                  <div className="menu-item-text">Privacidad</div>
                 </div>
                 <div className="menu-item" onClick={() => {
                   setMenuVisible(false);

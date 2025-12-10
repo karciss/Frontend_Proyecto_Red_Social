@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import academicService from '../services/academicService';
@@ -15,38 +15,39 @@ export const AcademicModule = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // Cargar datos según la pestaña activa y rol del usuario
+  // Log para debugging - ver qué usuario está logueado
   useEffect(() => {
-    if (user?.ci && user?.rol !== 'administrador') {
-      if (activeTab === 'materias') {
-        loadMateriasUsuario();
-      } else if (activeTab === 'notas') {
-        loadNotas();
-      } else if (activeTab === 'horario') {
-        loadHorarios();
-      }
-    }
-  }, [activeTab, user]);
+    console.log('👤 Usuario logueado:', user?.nombre, user?.apellido, '- Rol:', user?.rol);
+  }, [user]);
 
-  const loadMateriasUsuario = async () => {
+  const loadMateriasUsuario = useCallback(async () => {
+    console.log('📚 Iniciando carga de materias del usuario autenticado');
     setLoading(true);
     setError(null);
     
-    // Cargar materias específicas del estudiante actual
-    const { data, error: apiError } = await academicService.getMateriasEstudiante(user.ci);
+    // El backend usa el token JWT para identificar al usuario
+    // No necesitamos pasar CI o correo
+    const { data, error: apiError } = await academicService.getMateriasEstudiante();
+    
+    console.log('📦 Respuesta de materias:', { data, error: apiError });
     
     if (apiError) {
+      console.error('❌ Error al cargar materias:', apiError);
       setError(apiError);
     } else {
+      console.log('✅ Materias cargadas:', data);
       setMaterias(data || []);
     }
     setLoading(false);
-  };
+  }, []);
 
-  const loadNotas = async () => {
+  const loadNotas = useCallback(async () => {
+    console.log('📊 Iniciando carga de notas del usuario autenticado');
     setLoading(true);
     setError(null);
-    const { data, error: apiError } = await academicService.getNotasEstudiante(user.ci);
+    
+    // El backend usa el token JWT para identificar al usuario
+    const { data, error: apiError } = await academicService.getNotasEstudiante();
     
     if (apiError) {
       setError(apiError);
@@ -54,12 +55,15 @@ export const AcademicModule = () => {
       setNotas(data || []);
     }
     setLoading(false);
-  };
+  }, []);
 
-  const loadHorarios = async () => {
+  const loadHorarios = useCallback(async () => {
+    console.log('📅 Iniciando carga de horarios del usuario autenticado');
     setLoading(true);
     setError(null);
-    const { data, error: apiError } = await academicService.getHorariosEstudiante(user.ci);
+    
+    // El backend usa el token JWT para identificar al usuario
+    const { data, error: apiError } = await academicService.getHorariosEstudiante();
     
     if (apiError) {
       setError(apiError);
@@ -67,7 +71,27 @@ export const AcademicModule = () => {
       setHorarios(data || []);
     }
     setLoading(false);
-  };
+  }, []);
+  
+  // Cargar datos según la pestaña activa y rol del usuario
+  useEffect(() => {
+    // Solo cargar datos si el usuario es estudiante o docente (NO admin)
+    if (!user || user?.rol === 'administrador') {
+      return; // Salir temprano si no hay usuario o es admin
+    }
+    
+    // Cargar según pestaña activa
+    if (activeTab === 'materias') {
+      loadMateriasUsuario();
+    } else if (activeTab === 'notas') {
+      // Solo cargar notas si es estudiante
+      if (user?.rol === 'estudiante') {
+        loadNotas();
+      }
+    } else if (activeTab === 'horario') {
+      loadHorarios();
+    }
+  }, [activeTab, user, loadMateriasUsuario, loadNotas, loadHorarios]);
   
   // Si es administrador, mostrar panel de administración (después de todos los hooks)
   if (user?.rol === 'administrador') {
@@ -181,7 +205,16 @@ export const AcademicModule = () => {
                 color: theme.colors.textSecondary
               }}>
                 <div style={{ fontSize: '60px', marginBottom: '20px' }}>📚</div>
-                <div>No hay materias registradas</div>
+                <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
+                  No hay materias registradas
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  marginTop: '16px',
+                  color: theme.colors.textSecondary 
+                }}>
+                  Contacta a un administrador para que te asigne materias
+                </div>
               </div>
             ) : (
               materias.map(materia => (
@@ -268,6 +301,34 @@ export const AcademicModule = () => {
         }}>
           {user?.nombre} {user?.apellido} - Visualiza tus materias, notas y horarios asignados
         </p>
+        
+        {/* Panel de información del estudiante */}
+        <div style={{
+          marginTop: '16px',
+          padding: '12px',
+          background: theme.colors.primary + '10',
+          borderRadius: '8px',
+          fontSize: '13px',
+          color: theme.colors.text,
+          border: `1px solid ${theme.colors.primary}40`
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <strong>👤 {user?.nombre} {user?.apellido}</strong> • {user?.correo}
+            </div>
+            <div style={{ 
+              padding: '4px 12px',
+              background: materias.length > 0 ? '#00cc0020' : theme.colors.cardBackground,
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: '600',
+              color: materias.length > 0 ? '#00cc00' : theme.colors.textSecondary
+            }}>
+              📚 {materias.length} {materias.length === 1 ? 'materia' : 'materias'}
+            </div>
+          </div>
+        </div>
+        
         <div style={{
           display: 'flex',
           gap: '16px',
@@ -355,13 +416,15 @@ const MateriaCard = ({ materia, theme }) => {
         color: theme.colors.textSecondary,
         marginBottom: '4px'
       }}>
-        Departamento: {materia.departamento || 'N/A'}
+        Docente: {materia.docente?.usuario?.nombre 
+          ? `${materia.docente.usuario.nombre} ${materia.docente.usuario.apellido || ''}`
+          : 'Por asignar'}
       </div>
       <div style={{
         fontSize: '14px',
         color: theme.colors.textSecondary
       }}>
-        Semestre: {materia.semestre || 'N/A'}
+        Origen: {materia.origen === 'SIU' ? 'SIU' : 'Manual'}
       </div>
     </div>
   );
@@ -425,7 +488,13 @@ const NotasView = ({ notas, theme }) => {
                 Fecha
               </div>
               <div style={{ fontSize: '14px', fontWeight: '600', color: theme.colors.text }}>
-                {nota.fecha ? new Date(nota.fecha).toLocaleDateString('es-ES') : 'N/A'}
+                {nota.fecha_registro_nota 
+                  ? new Date(nota.fecha_registro_nota).toLocaleDateString('es-ES', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })
+                  : 'Sin fecha'}
               </div>
             </div>
           </div>

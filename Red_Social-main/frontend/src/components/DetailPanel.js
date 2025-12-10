@@ -6,6 +6,39 @@ import mensajeriaService from '../services/mensajeriaService';
 import '../styles/DetailPanel.css';
 import '../styles/CarpoolingDetail.css';
 import '../styles/Messages.css';
+import '../styles/Social.css';
+
+// Funciones para manejar fechas en hora de Bolivia (UTC-4)
+const formatBoliviaTime = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('es-ES', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'America/La_Paz'
+  });
+};
+
+const formatBoliviaDate = (dateString, options = {}) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('es-ES', { 
+    ...options,
+    timeZone: 'America/La_Paz'
+  });
+};
+
+const getBoliviaDateString = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('es-ES', { 
+    year: 'numeric',
+    month: '2-digit', 
+    day: '2-digit',
+    timeZone: 'America/La_Paz'
+  });
+};
 
 const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
   const { theme } = useTheme();
@@ -25,6 +58,21 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
   const [conversacionInfo, setConversacionInfo] = useState(null);
   const [loadingGroupInfo, setLoadingGroupInfo] = useState(false);
   const messagesEndRef = useRef(null);
+  
+  // Estados para editar y eliminar mensajes
+  const [openMessageMenuId, setOpenMessageMenuId] = useState(null);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editMessageContent, setEditMessageContent] = useState('');
+  const [showDeleteMessageModal, setShowDeleteMessageModal] = useState(false);
+  const [deleteMessageId, setDeleteMessageId] = useState(null);
+  const [deletingMessage, setDeletingMessage] = useState(false);
+  
+  // Estados para editar/eliminar publicación
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingPost, setDeletingPost] = useState(false);
   
   // Default item para mostrar siempre un ejemplo como en la imagen
   const defaultItem = {
@@ -49,6 +97,8 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
   useEffect(() => {
     if (item.tipo === 'conversacion' && item.id_conversacion) {
       loadMensajes();
+      // Marcar mensajes como leídos automáticamente al abrir la conversación
+      marcarComoLeidos();
     }
   }, [item.id_conversacion]);
 
@@ -56,9 +106,40 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
   useEffect(() => {
     scrollToBottom();
   }, [mensajes]);
+  
+  // Cerrar menú de opciones al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showOptionsMenu && !e.target.closest('.options-menu-container')) {
+        setShowOptionsMenu(false);
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showOptionsMenu]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const marcarComoLeidos = async () => {
+    if (!item.id_conversacion) return;
+    
+    try {
+      const result = await mensajeriaService.marcarMensajesLeidos(item.id_conversacion);
+      if (result.error) {
+        console.error('Error al marcar mensajes como leídos:', result.error);
+      } else {
+        console.log('✅ Mensajes marcados como leídos exitosamente');
+        // Actualizar el item localmente para que el contador desaparezca inmediatamente
+        if (item.mensajes_no_leidos && item.mensajes_no_leidos > 0) {
+          item.mensajes_no_leidos = 0;
+        }
+      }
+    } catch (error) {
+      console.error('Error al marcar mensajes como leídos:', error);
+    }
   };
 
   const loadMensajes = async () => {
@@ -98,6 +179,63 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
       setTimeout(scrollToBottom, 100);
     } else {
       alert(error || 'Error al enviar mensaje');
+    }
+  };
+
+  const handleEditMessage = async (mensajeId) => {
+    if (!editMessageContent.trim()) return;
+    
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://backend-social-f3ob.onrender.com/api/v1'}/mensajes/${mensajeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('user-token')}`
+        },
+        body: JSON.stringify({ contenido: editMessageContent })
+      });
+      
+      if (response.ok) {
+        setMensajes(prev => prev.map(msg => 
+          msg.id_mensaje === mensajeId 
+            ? { ...msg, contenido: editMessageContent, editado: true }
+            : msg
+        ));
+        setEditingMessageId(null);
+        setEditMessageContent('');
+      } else {
+        throw new Error('Error al actualizar mensaje');
+      }
+    } catch (error) {
+      console.error('Error al editar mensaje:', error);
+      alert('Error al editar el mensaje');
+    }
+  };
+
+  const handleDeleteMessage = async () => {
+    if (!deleteMessageId) return;
+    
+    setDeletingMessage(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://backend-social-f3ob.onrender.com/api/v1'}/mensajes/${deleteMessageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('user-token')}`
+        }
+      });
+      
+      if (response.ok) {
+        setMensajes(prev => prev.filter(msg => msg.id_mensaje !== deleteMessageId));
+        setShowDeleteMessageModal(false);
+        setDeleteMessageId(null);
+      } else {
+        throw new Error('Error al eliminar mensaje');
+      }
+    } catch (error) {
+      console.error('Error al eliminar mensaje:', error);
+      alert('Error al eliminar el mensaje');
+    } finally {
+      setDeletingMessage(false);
     }
   };
 
@@ -177,6 +315,75 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
       }
     } catch (err) {
       console.error('Error al reaccionar:', err);
+    }
+  };
+  
+  // Función para editar publicación
+  const handleEditPost = async () => {
+    if (!editedContent.trim()) return;
+    
+    try {
+      // Preservar el prefijo [EVENTO] si existía
+      const wasEvent = item.contenido && item.contenido.startsWith('[EVENTO]');
+      const contenidoFinal = wasEvent ? `[EVENTO]${editedContent}` : editedContent;
+      
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://backend-social-f3ob.onrender.com/api/v1'}/publicaciones/${item.id_publicacion}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('user-token')}`
+        },
+        body: JSON.stringify({ contenido: contenidoFinal })
+      });
+      
+      if (response.ok) {
+        // Actualizar localmente
+        item.contenido = contenidoFinal;
+        setEditMode(false);
+        setShowSuccessMessage(true);
+        setTimeout(() => setShowSuccessMessage(false), 2000);
+        
+        // Recargar después de un momento
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        throw new Error('Error al actualizar');
+      }
+    } catch (error) {
+      console.error('Error al editar:', error);
+      setErrorText('Error al editar la publicación');
+      setShowErrorMessage(true);
+      setTimeout(() => setShowErrorMessage(false), 4000);
+    }
+  };
+  
+  // Función para eliminar publicación
+  const handleDeletePost = async () => {
+    setDeletingPost(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://backend-social-f3ob.onrender.com/api/v1'}/publicaciones/${item.id_publicacion}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('user-token')}`
+        }
+      });
+      
+      if (response.ok) {
+        setShowDeleteModal(false);
+        setShowSuccessMessage(true);
+        setTimeout(() => {
+          if (onClose) onClose();
+          window.location.reload();
+        }, 1500);
+      } else {
+        throw new Error('Error al eliminar');
+      }
+    } catch (error) {
+      console.error('Error al eliminar:', error);
+      setErrorText('Error al eliminar la publicación');
+      setShowErrorMessage(true);
+      setTimeout(() => setShowErrorMessage(false), 4000);
+    } finally {
+      setDeletingPost(false);
     }
   };
   
@@ -611,19 +818,29 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
     // Agrupar mensajes por fecha
     const groupMessagesByDate = (messages) => {
       const groups = {};
+      
       messages.forEach(mensaje => {
-        const fecha = new Date(mensaje.fecha_envio);
-        const hoy = new Date();
-        const ayer = new Date(hoy);
-        ayer.setDate(ayer.getDate() - 1);
+        // Convertir la fecha del mensaje a hora de Bolivia
+        const fechaMensaje = new Date(mensaje.fecha_envio);
+        const fechaBolivia = new Date(fechaMensaje.toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
+        
+        // Obtener la fecha actual en Bolivia
+        const ahora = new Date();
+        const horaBolivia = new Date(ahora.toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
+        
+        // Resetear horas para comparar solo fechas
+        const hoyBolivia = new Date(horaBolivia.getFullYear(), horaBolivia.getMonth(), horaBolivia.getDate());
+        const mensajeDia = new Date(fechaBolivia.getFullYear(), fechaBolivia.getMonth(), fechaBolivia.getDate());
+        const ayerBolivia = new Date(hoyBolivia);
+        ayerBolivia.setDate(ayerBolivia.getDate() - 1);
         
         let label;
-        if (fecha.toDateString() === hoy.toDateString()) {
+        if (mensajeDia.getTime() === hoyBolivia.getTime()) {
           label = 'Hoy';
-        } else if (fecha.toDateString() === ayer.toDateString()) {
+        } else if (mensajeDia.getTime() === ayerBolivia.getTime()) {
           label = 'Ayer';
         } else {
-          label = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+          label = formatBoliviaDate(mensaje.fecha_envio, { day: 'numeric', month: 'long' });
         }
         
         if (!groups[label]) {
@@ -638,7 +855,10 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
     
     return (
       <>
-        <div className="detail-content">
+        <div className="detail-content" style={{ 
+          paddingBottom: '0',
+          marginBottom: '0'
+        }}>
           <div className="messages-container">
             {loadingMensajes ? (
               <div style={{ textAlign: 'center', padding: '40px', color: theme.colors.textSecondary }}>
@@ -657,29 +877,166 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
                   <div className="message-day-divider">{fecha}</div>
                   {mensajesAgrupados[fecha].map(mensaje => {
                     const esMio = mensaje.id_user === user?.id_user;
-                    // Asegurarse de que la fecha se parsea correctamente
-                    const fechaMensaje = new Date(mensaje.fecha_envio);
-                    const hora = fechaMensaje.toLocaleTimeString('es-ES', { 
-                      hour: '2-digit', 
-                      minute: '2-digit',
-                      hour12: false
-                    });
+                    // Obtener hora en Bolivia
+                    const hora = formatBoliviaTime(mensaje.fecha_envio);
                     
                     return (
-                      <div key={mensaje.id_mensaje} className={`message-bubble ${esMio ? 'sent' : 'received'}`}>
-                        {mensaje.usuario && (
-                          <div className="message-sender" style={{
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            marginBottom: '4px',
-                            color: esMio ? 'rgba(255,255,255,0.8)' : theme.colors.primary,
-                            textAlign: esMio ? 'right' : 'left'
-                          }}>
-                            {esMio ? 'Tú' : `${mensaje.usuario.nombre} ${mensaje.usuario.apellido}`}
-                          </div>
-                        )}
-                        <div className="message-text">{mensaje.contenido}</div>
-                        <div className="message-time">{hora}</div>
+                      <div key={mensaje.id_mensaje} style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: esMio ? 'flex-end' : 'flex-start' }}>
+                        <div className={`message-bubble ${esMio ? 'sent' : 'received'}`} style={{ position: 'relative', paddingRight: esMio ? '35px' : undefined }}>
+                          {mensaje.usuario && (
+                            <div className="message-sender" style={{
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              marginBottom: '4px',
+                              color: esMio ? 'rgba(255,255,255,0.8)' : theme.colors.primary,
+                              textAlign: esMio ? 'right' : 'left'
+                            }}>
+                              {esMio ? 'Tú' : `${mensaje.usuario.nombre} ${mensaje.usuario.apellido}`}
+                            </div>
+                          )}
+                          
+                          {editingMessageId === mensaje.id_mensaje ? (
+                            <div style={{ width: '100%' }}>
+                              <textarea
+                                value={editMessageContent}
+                                onChange={(e) => setEditMessageContent(e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  minHeight: '60px',
+                                  padding: '8px',
+                                  fontSize: '14px',
+                                  lineHeight: '1.5',
+                                  color: theme.colors.text,
+                                  background: theme.colors.cardBackground,
+                                  border: `2px solid ${theme.colors.primary}`,
+                                  borderRadius: '8px',
+                                  resize: 'vertical',
+                                  fontFamily: 'inherit'
+                                }}
+                                autoFocus
+                              />
+                              <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                                <button
+                                  onClick={() => handleEditMessage(mensaje.id_mensaje)}
+                                  style={{
+                                    padding: '8px 16px',
+                                    background: `linear-gradient(145deg, ${theme.colors.primary}, ${theme.colors.primaryLight})`,
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Guardar
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingMessageId(null);
+                                    setEditMessageContent('');
+                                  }}
+                                  style={{
+                                    padding: '8px 16px',
+                                    background: '#374151',
+                                    color: 'white',
+                                    border: `1px solid ${theme.colors.textSecondary}`,
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="message-text">{mensaje.contenido}</div>
+                              {mensaje.editado && (
+                                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>editado</div>
+                              )}
+                            </>
+                          )}
+                          
+                          <div className="message-time">{hora}</div>
+                          
+                          {esMio && editingMessageId !== mensaje.id_mensaje && (
+                            <button
+                              onClick={() => setOpenMessageMenuId(openMessageMenuId === mensaje.id_mensaje ? null : mensaje.id_mensaje)}
+                              style={{
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'rgba(255,255,255,0.7)',
+                                fontSize: '16px',
+                                cursor: 'pointer',
+                                padding: '2px 6px',
+                                lineHeight: 1
+                              }}
+                            >
+                              ⋮
+                            </button>
+                          )}
+                          
+                          {openMessageMenuId === mensaje.id_mensaje && esMio && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '100%',
+                              right: '0',
+                              marginTop: '4px',
+                              background: theme.colors.cardBackground,
+                              border: `1px solid ${theme.colors.primaryLight}40`,
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                              overflow: 'hidden',
+                              zIndex: 100,
+                              minWidth: '120px'
+                            }}>
+                              <button
+                                onClick={() => {
+                                  setEditingMessageId(mensaje.id_mensaje);
+                                  setEditMessageContent(mensaje.contenido);
+                                  setOpenMessageMenuId(null);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: theme.colors.text,
+                                  fontSize: '13px',
+                                  cursor: 'pointer',
+                                  textAlign: 'left'
+                                }}
+                              >
+                                ✏️ Editar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setDeleteMessageId(mensaje.id_mensaje);
+                                  setShowDeleteMessageModal(true);
+                                  setOpenMessageMenuId(null);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: '#ff4444',
+                                  fontSize: '13px',
+                                  cursor: 'pointer',
+                                  textAlign: 'left'
+                                }}
+                              >
+                                🗑️ Eliminar
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -736,9 +1093,100 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
             </div>
           )}
         </div>
+        
+        {/* Modal de confirmación para eliminar mensaje */}
+        {showDeleteMessageModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10001
+          }}>
+            <div style={{
+              background: theme.colors.cardBackground,
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+            }}>
+              <div style={{
+                fontSize: '48px',
+                textAlign: 'center',
+                marginBottom: '16px'
+              }}>⚠️</div>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: '700',
+                color: theme.colors.text,
+                textAlign: 'center',
+                marginBottom: '12px'
+              }}>
+                Eliminar mensaje
+              </h3>
+              <p style={{
+                fontSize: '14px',
+                color: theme.colors.textSecondary,
+                textAlign: 'center',
+                marginBottom: '24px'
+              }}>
+                ¿Estás seguro de que quieres eliminar este mensaje? Esta acción no se puede deshacer.
+              </p>
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'center'
+              }}>
+                <button
+                  onClick={() => {
+                    setShowDeleteMessageModal(false);
+                    setDeleteMessageId(null);
+                  }}
+                  disabled={deletingMessage}
+                  style={{
+                    padding: '10px 24px',
+                    background: theme.colors.textSecondary,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: deletingMessage ? 'not-allowed' : 'pointer',
+                    opacity: deletingMessage ? 0.5 : 1
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteMessage}
+                  disabled={deletingMessage}
+                  style={{
+                    padding: '10px 24px',
+                    background: deletingMessage ? '#999' : '#ff4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: deletingMessage ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {deletingMessage ? 'Eliminando...' : 'Eliminar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     );
   };
+  
   // Detalle de notificación
   const renderNotificacionDetail = () => (
     <>
@@ -822,9 +1270,10 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
           alignItems: 'flex-start',
           gap: '16px',
           padding: '20px',
-          background: `${theme.colors.cardBackground}dd`,
+          background: theme.colors.cardBackground,
           borderRadius: '16px',
-          border: `1px solid ${theme.colors.primaryLight}20`
+          border: `1px solid ${theme.colors.primaryLight}20`,
+          position: 'relative'
         }}>
           <div style={{
             width: '56px',
@@ -857,16 +1306,161 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
             }}>
               @{item.userHandle || 'usuario'}
             </div>
-            <div style={{ 
-              fontSize: '16px',
-              lineHeight: '1.6',
-              color: theme.colors.text,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word'
-            }}>
-              {item.contenido || item.title}
-            </div>
+            
+            {/* Content o Edit mode */}
+            {editMode ? (
+              <div style={{ marginBottom: '12px' }}>
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  style={{
+                    width: '100%',
+                    minHeight: '120px',
+                    padding: '12px',
+                    fontSize: '16px',
+                    lineHeight: '1.6',
+                    color: theme.colors.text,
+                    background: theme.colors.cardBackground,
+                    border: `2px solid ${theme.colors.primary}`,
+                    borderRadius: '8px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit'
+                  }}
+                  autoFocus
+                />
+                <div style={{
+                  display: 'flex',
+                  gap: '12px',
+                  marginTop: '12px'
+                }}>
+                  <button
+                    onClick={handleEditPost}
+                    style={{
+                      padding: '10px 24px',
+                      background: `linear-gradient(145deg, ${theme.colors.primary}, ${theme.colors.primaryLight})`,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditMode(false);
+                      setEditedContent((item.contenido || item.title || '').replace('[EVENTO]', ''));
+                    }}
+                    style={{
+                      padding: '10px 24px',
+                      background: theme.colors.textSecondary,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ 
+                fontSize: '16px',
+                lineHeight: '1.6',
+                color: theme.colors.text,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}>
+                {(item.contenido || item.title || '').replace('[EVENTO]', '')}
+              </div>
+            )}
           </div>
+          
+          {/* Options menu button - only for post owner */}
+          {user && item.id_user === user.id_user && !editMode && (
+            <div className="options-menu-container" style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: theme.colors.textSecondary,
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  lineHeight: 1
+                }}
+                title="Opciones"
+              >
+                ⋮
+              </button>
+              
+              {showOptionsMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: '0',
+                  marginTop: '8px',
+                  background: theme.colors.cardBackground,
+                  border: `1px solid ${theme.colors.primaryLight}40`,
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  overflow: 'hidden',
+                  zIndex: 1000,
+                  minWidth: '150px'
+                }}>
+                  <button
+                    onClick={() => {
+                      setShowOptionsMenu(false);
+                      setEditMode(true);
+                      setEditedContent((item.contenido || item.title || '').replace('[EVENTO]', ''));
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: theme.colors.text,
+                      fontSize: '15px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = `${theme.colors.primary}20`}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    ✏️ Editar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowOptionsMenu(false);
+                      setShowDeleteModal(true);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: theme.colors.notification,
+                      fontSize: '15px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = `${theme.colors.notification}20`}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    🗑️ Eliminar
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Mostrar media si existe */}
@@ -914,7 +1508,7 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
                 {media.tipo === 'documento' && (
                   <div style={{
                     padding: '40px',
-                    background: `linear-gradient(145deg, ${theme.colors.cardBackground}, ${theme.colors.cardBackground}dd)`,
+                    background: theme.colors.cardBackground,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -999,7 +1593,7 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
         {/* Información adicional */}
         <div style={{
           padding: '20px',
-          background: `${theme.colors.cardBackground}dd`,
+          background: theme.colors.cardBackground,
           borderRadius: '16px',
           border: `1px solid ${theme.colors.primaryLight}20`
         }}>
@@ -1150,7 +1744,7 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
   );
   
   return (
-    <div className="detail-panel">
+    <div className="detail-panel" style={{ background: '#000000' }}>
       {/* Mensaje de éxito flotante */}
       {showSuccessMessage && (
         <div style={{
@@ -1198,6 +1792,103 @@ const DetailPanel = ({ item, onClose, onUpdateComentarios }) => {
         }}>
           <span style={{ fontSize: '20px' }}>❌</span>
           {errorText}
+        </div>
+      )}
+      
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001,
+          padding: '20px'
+        }}
+        onClick={() => !deletingPost && setShowDeleteModal(false)}
+        >
+          <div style={{
+            background: theme.colors.cardBackground,
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '440px',
+            width: '100%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            border: `1px solid ${theme.colors.primaryLight}40`
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              fontSize: '48px',
+              textAlign: 'center',
+              marginBottom: '20px'
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{
+              fontSize: '22px',
+              fontWeight: '700',
+              color: theme.colors.text,
+              textAlign: 'center',
+              marginBottom: '12px'
+            }}>
+              Eliminar publicación
+            </h3>
+            <p style={{
+              fontSize: '16px',
+              color: theme.colors.textSecondary,
+              textAlign: 'center',
+              marginBottom: '32px',
+              lineHeight: '1.5'
+            }}>
+              ¿Estás seguro que quieres eliminar esta publicación? Esta acción no se puede deshacer.
+            </p>
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deletingPost}
+                style={{
+                  padding: '12px 32px',
+                  background: theme.colors.textSecondary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: deletingPost ? 'not-allowed' : 'pointer',
+                  opacity: deletingPost ? 0.5 : 1
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeletePost}
+                disabled={deletingPost}
+                style={{
+                  padding: '12px 32px',
+                  background: deletingPost ? theme.colors.textSecondary : 'linear-gradient(145deg, #ef4444, #f87171)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: deletingPost ? 'not-allowed' : 'pointer',
+                  opacity: deletingPost ? 0.7 : 1
+                }}
+              >
+                {deletingPost ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
       

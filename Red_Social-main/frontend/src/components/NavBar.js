@@ -130,7 +130,7 @@ const NavBar = ({ activeTab, setActiveTab }) => {
           onClick={() => window.location.href = '/settings'}
           style={{ cursor: 'pointer' }}
         >
-          <img src={user?.avatar || "https://ui-avatars.com/api/?name="+userName} alt="avatar" />
+          <img src={user?.foto_perfil || user?.avatar || "https://ui-avatars.com/api/?name="+userName} alt="avatar" />
           <div className="profile-name">{userName}</div>
         </div>
       </div>

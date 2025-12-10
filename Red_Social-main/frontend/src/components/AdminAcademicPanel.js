@@ -114,14 +114,13 @@ export default function AdminAcademicPanel() {
     setLoading(true);
     setError(null);
     const { data, error: apiError } = await academicService.getMaterias();
-    console.log('📚 Materias cargadas:', data);
-    console.log('❌ Error al cargar materias:', apiError);
+    
     if (apiError) {
-      console.error('Error cargando materias:', apiError);
+      console.error('❌ Error cargando materias:', apiError);
       setError('No se pudieron cargar las materias desde el backend.');
       setMaterias([]);
     } else {
-      console.log('✅ Materias establecidas:', data);
+      console.log('✅ Materias cargadas:', data?.length || 0, 'materias');
       setMaterias(data || []);
     }
     setLoading(false);

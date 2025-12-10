@@ -3,11 +3,12 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import amigosService from '../services/amigosService';
 import api from '../services/api';
+import { uploadFiles } from '../services/uploadService';
 import '../styles/AmigosModule.css';
 
 const AmigosModule = () => {
   const { theme } = useTheme();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   
   const [activeTab, setActiveTab] = useState('amigos'); // amigos, solicitudes, buscar
   const [amigos, setAmigos] = useState([]);
@@ -19,6 +20,9 @@ const AmigosModule = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   // Función para mostrar toast
   const showToast = (message, type = 'success') => {
@@ -105,6 +109,55 @@ const AmigosModule = () => {
     }
   };
 
+  // Función para confirmar cambio de foto
+  const handleConfirmPhotoChange = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      setShowPhotoModal(false);
+      
+      // Mostrar loading
+      showToast('📷 Subiendo foto...', 'info');
+      
+      // Subir archivo
+      const { data: urls, error } = await uploadFiles([selectedFile]);
+      
+      if (error) {
+        showToast('❌ Error al subir la foto: ' + error, 'error');
+        return;
+      }
+      
+      // Actualizar usuario en el backend
+      await api.put(`/usuarios/${user.id_user}`, {
+        foto_perfil: urls[0]
+      });
+      
+      // Actualizar contexto y localStorage
+      const updatedUser = { ...user, foto_perfil: urls[0] };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('user-data', JSON.stringify(updatedUser));
+      
+      // Actualizar en el contexto si existe la función
+      if (updateUser) {
+        updateUser({ foto_perfil: urls[0] });
+      }
+      
+      showToast('✅ Foto de perfil actualizada correctamente', 'success');
+      
+      // Recargar después de 1 segundo
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      
+    } catch (err) {
+      console.error('Error:', err);
+      showToast('❌ Error al cambiar la foto de perfil', 'error');
+    } finally {
+      setSelectedFile(null);
+      setPreviewPhoto(null);
+    }
+  };
+
   const handleEnviarSolicitud = async (idUsuario) => {
     try {
       await amigosService.enviarSolicitud(idUsuario);
@@ -175,7 +228,45 @@ const AmigosModule = () => {
           />
         </div>
         
-        <div className="camera-icon" onClick={() => alert('Funcionalidad de cámara próximamente')}>
+        <input 
+          type="file" 
+          id="profile-photo-input" 
+          accept="image/*" 
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validar que sea imagen
+            if (!file.type.startsWith('image/')) {
+              alert('⚠️ Solo se permiten imágenes');
+              return;
+            }
+            
+            // Validar tamaño (máximo 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+              alert('⚠️ La imagen no debe superar 5MB');
+              return;
+            }
+            
+            // Mostrar preview
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setPreviewPhoto(reader.result);
+              setSelectedFile(file);
+              setShowPhotoModal(true);
+            };
+            reader.readAsDataURL(file);
+            
+            // Limpiar el input
+            e.target.value = '';
+          }}
+        />
+        <div 
+          className="camera-icon" 
+          onClick={() => document.getElementById('profile-photo-input').click()}
+          style={{ cursor: 'pointer' }}
+        >
           📷
         </div>
       </div>
@@ -464,6 +555,108 @@ const AmigosModule = () => {
       {toast.show && (
         <div className={`toast toast-${toast.type}`}>
           {toast.message}
+        </div>
+      )}
+
+      {/* Modal de confirmación de foto */}
+      {showPhotoModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            background: '#2a2d35',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '90%',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+          }}>
+            <h3 style={{ 
+              color: 'white', 
+              marginBottom: '16px',
+              fontSize: '20px',
+              fontWeight: '600'
+            }}>
+              Cambiar foto de perfil
+            </h3>
+            
+            <div style={{
+              width: '200px',
+              height: '200px',
+              margin: '0 auto 20px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: '4px solid #8B1E41'
+            }}>
+              <img 
+                src={previewPhoto} 
+                alt="Preview" 
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+            </div>
+            
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.7)',
+              marginBottom: '24px',
+              textAlign: 'center'
+            }}>
+              ¿Deseas establecer esta imagen como tu foto de perfil?
+            </p>
+            
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => {
+                  setShowPhotoModal(false);
+                  setPreviewPhoto(null);
+                  setSelectedFile(null);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'transparent',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmPhotoChange}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #8B1E41, #AD3F62)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

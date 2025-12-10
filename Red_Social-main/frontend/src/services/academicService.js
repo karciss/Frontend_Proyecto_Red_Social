@@ -54,15 +54,33 @@ const academicService = {
 
   /**
    * Obtener notas de un estudiante
+   * Si se pasa ci/id_user, obtiene las notas de ese estudiante (para admin/docente)
+   * Si no se pasa parámetro, obtiene las notas del usuario autenticado (para estudiante)
    */
-  getNotasEstudiante: async (ci) => {
+  getNotasEstudiante: async (idUser = null) => {
     try {
-      const response = await apiService.get(`/notas/estudiante/${ci}`);
+      let response;
+      
+      // Si se proporciona un ID de usuario, usar el endpoint específico (admin/docente)
+      if (idUser) {
+        console.log('🔍 Admin/Docente obteniendo notas del estudiante:', idUser);
+        response = await apiService.get(`/notas/estudiante/${idUser}`);
+      } else {
+        // Sin ID, usar el endpoint /mis-notas (estudiante autenticado)
+        console.log('🔍 Estudiante obteniendo sus propias notas');
+        response = await apiService.get('/notas/mis-notas');
+      }
+      
+      console.log('✅ Notas obtenidas exitosamente:', response.data?.length || 0, 'notas');
       return { data: response.data, error: null };
     } catch (error) {
-      console.error('Error obteniendo notas:', error);
+      // Si es un error 403, es porque el usuario no es estudiante (esperado para admin/docente sin ID)
+      if (error.response?.status === 403) {
+        return { data: [], error: null }; // No mostrar error, simplemente retornar vacío
+      }
+      console.error('❌ Error obteniendo notas:', error);
       return { 
-        data: null, 
+        data: [], 
         error: error.response?.data?.detail || error.message 
       };
     }
@@ -86,15 +104,18 @@ const academicService = {
 
   /**
    * Obtener horarios de un estudiante
+   * Usa el endpoint /mi-horario que obtiene el horario del usuario autenticado
    */
   getHorariosEstudiante: async (ci) => {
     try {
-      const response = await apiService.get(`/horarios/estudiante/${ci}`);
+      console.log('🔍 Obteniendo horarios del estudiante autenticado (usando token JWT)');
+      const response = await apiService.get('/horarios/mi-horario');
+      console.log('✅ Horarios obtenidos exitosamente:', response.data);
       return { data: response.data, error: null };
     } catch (error) {
-      console.error('Error obteniendo horarios:', error);
+      console.error('❌ Error obteniendo horarios:', error);
       return { 
-        data: null, 
+        data: [], 
         error: error.response?.data?.detail || error.message 
       };
     }
@@ -279,17 +300,23 @@ const academicService = {
   },
 
   /**
-   * Obtener materias de un estudiante específico
+   * Obtener materias del estudiante autenticado
+   * Usa el token JWT para identificar al estudiante
    */
-  getMateriasEstudiante: async (ciEstudiante) => {
+  getMateriasEstudiante: async () => {
     try {
-      const response = await apiService.get(`/estudiantes/${ciEstudiante}/materias`);
+      console.log('🔍 Obteniendo materias del estudiante autenticado');
+      console.log('🌐 API URL:', process.env.REACT_APP_API_URL || 'https://backend-social-f3ob.onrender.com/api/v1');
+      
+      const response = await apiService.get('/materias/mis-materias');
+      console.log('✅ Materias obtenidas exitosamente:', response.data);
       return { data: response.data, error: null };
     } catch (error) {
-      console.error('Error obteniendo materias del estudiante:', error);
+      console.error('❌ Error obteniendo materias del estudiante:', error);
+      console.error('❌ Error completo:', error.response || error);
       return { 
-        data: null, 
-        error: error.response?.data?.detail || error.message 
+        data: [], 
+        error: error.response?.data?.detail || error.message || 'Error al cargar materias'
       };
     }
   },
