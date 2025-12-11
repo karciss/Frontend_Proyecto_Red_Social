@@ -1,0 +1,93 @@
+/* Estilos globales para temas */
+
+:root {
+  /* Variables por defecto (modo oscuro) */
+  --bg-primary: #222232;
+  --bg-secondary: #2D2D3A;
+  --card-bg: #2A2A3C;
+  --card-secondary: rgba(255, 255, 255, 0.05);
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --primary-color: #AD3F62;
+  --primary-light: rgba(173, 63, 98, 0.2);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --input-bg: rgba(255, 255, 255, 0.07);
+  --hover-bg: rgba(255, 255, 255, 0.1);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --success-color: #4CAF50;
+  --warning-color: #FF9800;
+  --error-color: #F44336;
+  --info-color: #2196F3;
+}
+
+/* Modo claro */
+body.light-theme {
+  --bg-primary: #F8F9FA;
+  --bg-secondary: #FFFFFF;
+  --card-bg: #FFFFFF;
+  --card-secondary: #F5F5F5;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --primary-color: #AD3F62;
+  --primary-light: rgba(173, 63, 98, 0.1);
+  --border-color: #E1E1E1;
+  --input-bg: #F8F8F8;
+  --hover-bg: rgba(0, 0, 0, 0.05);
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Modo oscuro (las variables por defecto ya son para el modo oscuro) */
+body.dark-theme {
+  --bg-primary: #222232;
+  --bg-secondary: #2D2D3A;
+  --shadow-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Aplicación de estilos a elementos comunes */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.card, .panel, .modal-content {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+input, textarea, select {
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+/* Botones con diferentes variantes */
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-secondary {
+  background-color: var(--card-secondary);
+  color: var(--text-primary);
+}
+
+.btn-outlined {
+  background-color: transparent;
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* Efectos hover */
+.btn:hover, .nav-item:hover, .clickable:hover {
+  background-color: var(--hover-bg);
+}
+
+/* Estilos para transiciones suaves */
+.theme-transition {
+  transition: background-color 0.3s ease, 
+              color 0.3s ease, 
+              border-color 0.3s ease, 
+              box-shadow 0.3s ease;
+}

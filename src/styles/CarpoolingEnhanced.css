@@ -1,0 +1,204 @@
+/* Estilos adicionales para mejorar la interfaz de carpooling */
+
+/* Estilo para el punto de origen y destino */
+.route-path {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  margin: 16px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.route-path::before {
+  display: none;
+}
+
+.path-origin, .path-destination {
+  flex: 1;
+  text-align: center;
+  position: relative;
+}
+
+.path-location {
+  color: var(--text-color);
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 0;
+  letter-spacing: -0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.path-type {
+  color: var(--secondary-text);
+  font-size: 0.75rem;
+  margin: 4px 0 0 0;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.path-arrow {
+  margin: 0 20px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(139, 30, 65, 0.2);
+  border-radius: 50%;
+  color: var(--primary-color);
+  border: 1px solid rgba(139, 30, 65, 0.3);
+  position: relative;
+}
+
+.path-arrow::after {
+  display: none;
+}
+
+/* Estilos para días de la semana */
+.route-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+  justify-content: center;
+}
+
+.day-badge {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%);
+  color: var(--text-color);
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.day-badge.active {
+  background: linear-gradient(135deg, 
+    var(--primary-color) 0%,
+    var(--primary-light) 100%);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(139, 30, 65, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+/* Información de capacidad mejorada */
+.capacity-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 12px 0;
+}
+
+.capacity-text {
+  color: var(--text-color);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.capacity-indicator {
+  display: flex;
+  gap: 4px;
+}
+
+.capacity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.capacity-dot.filled {
+  background: linear-gradient(135deg, 
+    var(--primary-color) 0%,
+    var(--primary-light) 100%);
+  box-shadow: 0 0 6px rgba(139, 30, 65, 0.5);
+}
+
+/* Fecha y hora mejorada */
+.route-datetime {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 16px;
+  border-radius: 16px;
+  margin: 16px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.datetime-section {
+  text-align: center;
+  margin: 0 20px;
+}
+
+.datetime-label {
+  color: var(--secondary-text);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.datetime-value {
+  color: var(--text-color);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+/* Animaciones */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .route-path {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .path-arrow {
+    transform: rotate(90deg);
+  }
+  
+  .route-days {
+    justify-content: flex-start;
+  }
+  
+  .capacity-info {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}

@@ -1,0 +1,110 @@
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255,255,255,0.2);
+  transition: .3s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #9c2766;
+}
+
+input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+/* Estilos adicionales para ProfileSettings */
+.profile-settings-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 39, 102, 0.5) rgba(58, 58, 67, 0.1);
+}
+
+.profile-settings-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.profile-settings-container::-webkit-scrollbar-track {
+  background: rgba(58, 58, 67, 0.1);
+  border-radius: 10px;
+}
+
+.profile-settings-container::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 39, 102, 0.5);
+  border-radius: 10px;
+}
+
+.profile-main::-webkit-scrollbar {
+  width: 6px;
+}
+
+.profile-main::-webkit-scrollbar-track {
+  background: rgba(58, 58, 67, 0.1);
+  border-radius: 10px;
+}
+
+.profile-main::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 39, 102, 0.5);
+  border-radius: 10px;
+}
+
+/* Estilizamos todos los divs con scroll dentro del perfil */
+.profile-main div[style*="overflow: auto"]::-webkit-scrollbar,
+.profile-content-layout::-webkit-scrollbar {
+  width: 5px;
+}
+
+.profile-main div[style*="overflow: auto"]::-webkit-scrollbar-track,
+.profile-content-layout::-webkit-scrollbar-track {
+  background: rgba(58, 58, 67, 0.1);
+  border-radius: 8px;
+}
+
+.profile-main div[style*="overflow: auto"]::-webkit-scrollbar-thumb,
+.profile-content-layout::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 39, 102, 0.5);
+  border-radius: 8px;
+}
+
+.profile-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.profile-sidebar::-webkit-scrollbar-track {
+  background: rgba(58, 58, 67, 0.1);
+  border-radius: 10px;
+}
+
+.profile-sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 39, 102, 0.5);
+  border-radius: 10px;
+}

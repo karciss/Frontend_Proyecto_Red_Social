@@ -1,0 +1,67 @@
+/* Estilo para el formulario de registro - versión mejorada */
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding-right: 8px;
+  /* Eliminamos el max-height y overflow ya que el scroll estará en la tarjeta */
+  position: relative; /* Para el indicador de scroll */
+}
+
+/* Ya no necesitamos estilos de scrollbar aquí porque los aplicamos a toda la tarjeta */
+
+/* Añadimos un indicador de "Desliza para ver más" */
+.login-card::before {
+  content: "▼ Desliza para ver más";
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  color: white;
+  background-color: #AD3F62;
+  padding: 6px 16px;
+  border-radius: 20px;
+  z-index: 100;
+  animation: pulse 2s infinite;
+  opacity: 0.9;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes pulse {
+  0% { opacity: 0.5; transform: translateX(-50%) translateY(0); }
+  50% { opacity: 1; transform: translateX(-50%) translateY(-5px); }
+  100% { opacity: 0.5; transform: translateX(-50%) translateY(0); }
+}
+
+/* Mejoramos el espaciado entre campos */
+.signup-form .login-form-group {
+  margin-bottom: 8px; /* Reducimos el margen para que quepan más campos */
+}
+
+/* Añadimos un borde sutil a los campos para destacarlos */
+.signup-form .login-input {
+  border: 1px solid #333;
+  transition: border-color 0.2s;
+  padding: 10px; /* Reducimos un poco el padding para optimizar espacio */
+  height: auto; /* Asegurar que la altura sea automática */
+}
+
+.signup-form .login-input:focus {
+  border-color: #AD3F62;
+  box-shadow: 0 0 0 2px rgba(173, 63, 98, 0.2);
+}
+
+/* Hacemos el botón de registro más llamativo */
+.signup-form .login-button {
+  margin-top: 16px;
+  margin-bottom: 16px;
+  padding: 16px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  background: linear-gradient(to right, #AD3F62, #C5637F);
+  position: relative;
+  z-index: 5; /* Asegurarse que esté por encima del gradiente */
+}

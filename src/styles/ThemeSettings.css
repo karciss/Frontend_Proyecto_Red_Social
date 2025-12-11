@@ -1,0 +1,209 @@
+/* Estilos para el componente de configuración de tema */
+.theme-settings-container {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  background-color: var(--bg-color, #222);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  color: var(--text-color, white);
+}
+
+.theme-settings-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #8B1E41, #AD3F62);
+  color: white;
+}
+
+.theme-settings-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.theme-settings-content {
+  padding: 25px;
+}
+
+.theme-section {
+  margin-bottom: 30px;
+}
+
+.theme-section-title {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-color, white);
+}
+
+.theme-label {
+  display: block;
+  margin-bottom: 15px;
+  font-size: 16px;
+  color: var(--text-color, white);
+}
+
+.theme-options-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.theme-option {
+  width: 160px;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.theme-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.theme-option.active {
+  box-shadow: 0 0 0 2px var(--primary-color, #AD3F62);
+}
+
+.theme-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.theme-preview {
+  width: 100%;
+  height: 100px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.theme-preview-header {
+  height: 25px;
+}
+
+.theme-preview-content {
+  padding: 8px;
+}
+
+.theme-preview-line {
+  height: 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.theme-preview-line.short {
+  width: 60%;
+}
+
+/* Estilos para el tema claro */
+.light-preview {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+}
+
+.light-preview .theme-preview-header {
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.light-preview .theme-preview-line {
+  background-color: #e0e0e0;
+}
+
+/* Estilos para el tema oscuro */
+.dark-preview {
+  background-color: #222;
+  border: 1px solid #333;
+}
+
+.dark-preview .theme-preview-header {
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+.dark-preview .theme-preview-line {
+  background-color: #444;
+}
+
+/* Estilos para el tema colorido */
+.colorful-preview {
+  background: linear-gradient(135deg, #2d2d35 0%, #2d3e76 100%);
+  border: 1px solid #333;
+}
+
+.colorful-preview .theme-preview-header {
+  background: linear-gradient(135deg, #1e1e24 0%, #9c2766 100%);
+  border-bottom: 1px solid #9c2766;
+}
+
+.colorful-preview .theme-preview-line {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.theme-option-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background-color: var(--bg-card, rgba(255, 255, 255, 0.05));
+  color: var(--text-color, white);
+  font-size: 14px;
+}
+
+.theme-option-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.theme-check {
+  font-weight: bold;
+  color: var(--primary-color, #AD3F62);
+}
+
+/* Slider para tamaño de texto */
+.text-size-slider {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.text-size-min {
+  font-size: 14px;
+  color: var(--text-color, white);
+  opacity: 0.7;
+}
+
+.text-size-max {
+  font-size: 22px;
+  color: var(--text-color, white);
+  opacity: 0.7;
+}
+
+.text-size-range {
+  flex: 1;
+  height: 6px;
+  appearance: none;
+  background: linear-gradient(to right, var(--primary-color, #AD3F62), var(--primary-color, #AD3F62));
+  border-radius: 3px;
+  outline: none;
+}
+
+.text-size-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-color, #AD3F62);
+  cursor: pointer;
+}
+
+.text-size-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-color, #AD3F62);
+  cursor: pointer;
+}
