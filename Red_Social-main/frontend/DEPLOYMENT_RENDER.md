@@ -3,10 +3,16 @@
 1. Entra a Render Dashboard → New → Static Site.
 2. Conecta tu repositorio: `https://github.com/karciss/Front_Proyecto_red.git`.
 3. Selecciona la rama: `main` (o la rama que prefieras usar para producción).
-4. Build command:
+4. Build command (recommended):
 
 ```
 npm ci && npm run build
+```
+
+If you experience peer dependency installation issues, use this variation:
+
+```
+npm ci --legacy-peer-deps && npm run build
 ```
 
 5. Publish directory: `build`
