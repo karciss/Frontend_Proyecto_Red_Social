@@ -29,6 +29,7 @@ const MessagesModule = ({ onSelectItem, selectedItem }) => {
   const [showNuevoMensaje, setShowNuevoMensaje] = useState(false);
   const [busquedaUsuarios, setBusquedaUsuarios] = useState('');
   const [usuariosEncontrados, setUsuariosEncontrados] = useState([]);
+  const [conversacionSearch, setConversacionSearch] = useState('');
   const [tipoConversacion, setTipoConversacion] = useState('individual'); // 'individual' o 'grupal'
   const [usuariosSeleccionados, setUsuariosSeleccionados] = useState([]);
   const [nombreGrupo, setNombreGrupo] = useState('');
@@ -225,6 +226,8 @@ const MessagesModule = ({ onSelectItem, selectedItem }) => {
               <input 
                 type="text" 
                 placeholder="Buscar conversaciones..." 
+                value={conversacionSearch}
+                onChange={(e) => setConversacionSearch(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
@@ -655,12 +658,33 @@ const MessagesModule = ({ onSelectItem, selectedItem }) => {
             </div>
           ) : (
             conversaciones
-              .filter(conversacion => {
-                if (activeTab === 'recientes') return true;
-                if (activeTab === 'no-leidos') return (conversacion.mensajes_no_leidos || 0) > 0;
-                if (activeTab === 'grupos') return conversacion.es_grupal || conversacion.tipo === 'grupal';
-                return true;
-              })
+                .filter(conversacion => {
+                  // Filtrado por pestaña
+                  if (activeTab === 'no-leidos' && !((conversacion.mensajes_no_leidos || 0) > 0)) return false;
+                  if (activeTab === 'grupos' && !(conversacion.es_grupal || conversacion.tipo === 'grupal')) return false;
+
+                  // Filtrado por búsqueda en input (nombre de grupo o participantes)
+                  const q = (conversacionSearch || '').trim().toLowerCase();
+                  if (!q) return true;
+
+                  const esGrupal = conversacion.es_grupal || conversacion.tipo === 'grupal';
+                  const nombreGrupo = (conversacion.nombre || '').toLowerCase();
+                  if (esGrupal && nombreGrupo.includes(q)) return true;
+
+                  // Buscar en participantes
+                  const participantes = conversacion.participantes || [];
+                  for (const p of participantes) {
+                    const full = `${(p.nombre || '')} ${(p.apellido || '')}`.toLowerCase();
+                    if (full.includes(q)) return true;
+                    if ((p.usuario || p.nombre || '').toString().toLowerCase().includes(q)) return true;
+                  }
+
+                  // Fallback: buscar en último mensaje
+                  const ultimo = (conversacion.ultimo_mensaje?.contenido || '').toLowerCase();
+                  if (ultimo.includes(q)) return true;
+
+                  return false;
+                })
               .map((conversacion) => {
                 const esGrupal = conversacion.es_grupal || conversacion.tipo === 'grupal';
                 const otroParticipante = !esGrupal && conversacion.participantes?.length > 0 ? 

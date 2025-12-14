@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import academicService from '../services/academicService';
@@ -10,6 +10,9 @@ export const AcademicModule = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('materias');
   const [materias, setMaterias] = useState([]);
+  const [allMaterias, setAllMaterias] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchTimeoutRef = useRef(null);
   const [notas, setNotas] = useState([]);
   const [horarios, setHorarios] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +39,7 @@ export const AcademicModule = () => {
       setError(apiError);
     } else {
       console.log('✅ Materias cargadas:', data);
+      setAllMaterias(data || []);
       setMaterias(data || []);
     }
     setLoading(false);
@@ -92,6 +96,28 @@ export const AcademicModule = () => {
       loadHorarios();
     }
   }, [activeTab, user, loadMateriasUsuario, loadNotas, loadHorarios]);
+
+  // Filtrar materias por búsqueda (debounced) - efecto dentro del componente
+  useEffect(() => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      const q = (searchQuery || '').trim().toLowerCase();
+      if (!q) {
+        setMaterias(allMaterias);
+      } else {
+        const filtered = allMaterias.filter(m => {
+          const nombre = (m.nombre_materia || '').toLowerCase();
+          const codigo = (m.codigo_materia || '').toLowerCase();
+          const docente = (m.docente?.usuario?.nombre || '').toLowerCase();
+          return nombre.includes(q) || codigo.includes(q) || docente.includes(q);
+        });
+        setMaterias(filtered);
+      }
+    }, 250);
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [searchQuery, allMaterias]);
   
   // Si es administrador, mostrar panel de administración (después de todos los hooks)
   if (user?.rol === 'administrador') {
@@ -304,7 +330,7 @@ export const AcademicModule = () => {
         
         {/* Panel de información del estudiante */}
         <div style={{
-          marginTop: '16px',
+          marginTop: '20px',
           padding: '12px',
           background: theme.colors.primary + '10',
           borderRadius: '8px',
@@ -329,38 +355,42 @@ export const AcademicModule = () => {
           </div>
         </div>
         
-        <div style={{
-          display: 'flex',
-          gap: '16px',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          marginTop: '16px'
-        }}>
-          <div style={{ position: 'relative', flex: '1', minWidth: '250px' }}>
-            <input 
-              type="text" 
-              placeholder="Buscar materias..." 
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                paddingLeft: '40px',
-                borderRadius: '12px',
-                border: `1px solid ${theme.colors.primaryLight}40`,
-                background: theme.colors.cardBackground,
-                color: theme.colors.text,
-                fontSize: '15px',
-                outline: 'none'
-              }}
-            />
-            <span style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              fontSize: '18px'
-            }}>🔍</span>
+        {activeTab === 'materias' && (
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            marginTop: '20px'
+          }}>
+            <div style={{ position: 'relative', flex: '1', minWidth: '250px' }}>
+              <input 
+                type="text" 
+                placeholder="Buscar materias..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  paddingLeft: '40px',
+                  borderRadius: '12px',
+                  border: `1px solid ${theme.colors.primaryLight}40`,
+                  background: theme.colors.cardBackground,
+                  color: theme.colors.text,
+                  fontSize: '15px',
+                  outline: 'none'
+                }}
+              />
+              <span style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: '18px'
+              }}>🔍</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
       
       {renderTabs()}
@@ -429,6 +459,8 @@ const MateriaCard = ({ materia, theme }) => {
     </div>
   );
 };
+
+// (search effect moved inside component scope)
 
 // Componente para vista de notas
 const NotasView = ({ notas, theme }) => {

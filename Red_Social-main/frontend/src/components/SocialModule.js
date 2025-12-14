@@ -23,6 +23,10 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [showErrorMessage, setShowErrorMessage] = useState(false);
   const [errorText, setErrorText] = useState('');
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allPublicaciones, setAllPublicaciones] = useState([]);
+  const searchTimeoutRef = useRef(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileType, setFileType] = useState('imagen'); // imagen, documento, enlace
   const [isEventPost, setIsEventPost] = useState(false); // Marcar si la publicación es un evento
@@ -91,6 +95,7 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
           id: p.usuario?.id_user,
           nombre: p.usuario?.nombre
         })));
+        setAllPublicaciones(data || []);
         setPublicaciones(data || []);
       }
     } catch (err) {
@@ -100,6 +105,28 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
       setLoading(false);
     }
   };
+
+    // Debounced search: filter publicaciones locally by contenido, autor o materia
+    useEffect(() => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = setTimeout(() => {
+        const q = (searchQuery || '').trim().toLowerCase();
+        if (!q) {
+          setPublicaciones(allPublicaciones);
+        } else {
+          const filtered = allPublicaciones.filter(p => {
+            const contenido = (p.contenido || '').toLowerCase();
+            const autor = (p.usuario?.nombre || '').toLowerCase();
+            const materia = (p.materia?.nombre || '').toLowerCase();
+            return contenido.includes(q) || autor.includes(q) || materia.includes(q);
+          });
+          setPublicaciones(filtered);
+        }
+      }, 300);
+      return () => {
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+      };
+    }, [searchQuery, allPublicaciones]);
 
   // Crear nueva publicación
   const handleCreatePost = async () => {
@@ -442,19 +469,33 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
             <input 
               type="text" 
               placeholder="Buscar publicaciones..." 
-              className="search-input" 
+              className="search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
             <span className="search-icon">🔍</span>
           </div>
           <button 
             className="primary-button" 
             style={{ background: `linear-gradient(145deg, ${theme.colors.primary}, ${theme.colors.primaryLight})` }}
-            onClick={() => document.getElementById('newPostInput').focus()}
+            onClick={() => {
+              setShowCreatePost(prev => {
+                const next = !prev;
+                if (next) {
+                  setTimeout(() => {
+                    const el = document.getElementById('newPostInput');
+                    if (el) el.focus();
+                  }, 60);
+                }
+                return next;
+              });
+            }}
           >
             Nueva Publicación
           </button>
         </div>
         
+        {showCreatePost && (
         <div className="new-post-form" style={{
           background: `linear-gradient(145deg, ${theme.colors.cardBackground}dd, ${theme.colors.cardBackground}ee)`,
           backdropFilter: 'blur(10px)',
@@ -738,6 +779,7 @@ const SocialModule = ({ onSelectItem, selectedItem }) => {
             </button>
           </div>
         </div>
+        )}
         
         <div className="tab-selector">
           <div 

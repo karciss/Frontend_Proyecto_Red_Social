@@ -12,6 +12,7 @@ const CarpoolingModule = ({ onSelectItem, selectedItem }) => {
   // Estados para las rutas y carga
   const [activeTab, setActiveTab] = useState('disponibles');
   const [rutas, setRutas] = useState([]);
+  
   const [misRutas, setMisRutas] = useState({ como_conductor: [], como_pasajero: [] });
   const [historial, setHistorial] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +37,7 @@ const CarpoolingModule = ({ onSelectItem, selectedItem }) => {
   const [showUbicacionModal, setShowUbicacionModal] = useState(false);
   const [rutaToJoin, setRutaToJoin] = useState(null);
   const [ubicacionRecogida, setUbicacionRecogida] = useState('');
+  
 
   // Cerrar DetailPanel al cambiar de tab
   useEffect(() => {
@@ -51,7 +53,10 @@ const CarpoolingModule = ({ onSelectItem, selectedItem }) => {
       // Recargar las rutas según el tab activo
       if (activeTab === 'disponibles') {
         carpoolingService.getRutas()
-          .then(res => setRutas(res.data))
+          .then(res => {
+            const data = res.data || [];
+            setRutas(data);
+          })
           .catch(err => console.error('Error recargando rutas:', err));
       } else if (activeTab === 'mis-rutas') {
         carpoolingService.getMisRutas()
@@ -84,6 +89,8 @@ const CarpoolingModule = ({ onSelectItem, selectedItem }) => {
       window.removeEventListener('carpooling-updated', handleCarpoolingUpdate);
     };
   }, [activeTab]);
+
+  
 
   // Cargar rutas disponibles desde la API
   useEffect(() => {
@@ -439,16 +446,15 @@ const CarpoolingModule = ({ onSelectItem, selectedItem }) => {
   return (
     <>
       <div className="collections-section">
-        <div className="collections-header">
+        <div className="collections-header" style={{
+          background: `linear-gradient(145deg, ${theme.colors.cardBackground}dd, ${theme.colors.cardBackground}ee)`,
+          backdropFilter: 'blur(10px)',
+          border: `1px solid ${theme.colors.primaryLight}40`,
+          borderRadius: '16px',
+          padding: '24px',
+          marginBottom: '24px'
+        }}>
           <h2 className="collections-title">Carpooling Universitario</h2>
-          <div className="search-container">
-            <input 
-              type="text" 
-              placeholder="Buscar rutas..." 
-              className="search-input" 
-            />
-            <span className="search-icon">🔍</span>
-          </div>
           <button 
             className="primary-button" 
             style={{ 
@@ -461,7 +467,7 @@ const CarpoolingModule = ({ onSelectItem, selectedItem }) => {
           >
             Crear Ruta
           </button>
-        </div>
+            </div>
 
         <div className="tab-selector">
           <div 

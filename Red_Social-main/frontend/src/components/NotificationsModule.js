@@ -15,6 +15,7 @@ const NotificationsModule = ({ onSelectItem, selectedItem }) => {
   const [error, setError] = useState(null);
   const [processingRequest, setProcessingRequest] = useState(null);
   const [responseModal, setResponseModal] = useState({ show: false, type: '', message: '' });
+  const [notificationSearch, setNotificationSearch] = useState('');
 
   // Cargar notificaciones al montar
   useEffect(() => {
@@ -251,6 +252,8 @@ const NotificationsModule = ({ onSelectItem, selectedItem }) => {
               <input 
                 type="text" 
                 placeholder="Buscar notificaciones..." 
+                value={notificationSearch}
+                onChange={(e) => setNotificationSearch(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
@@ -360,7 +363,21 @@ const NotificationsModule = ({ onSelectItem, selectedItem }) => {
             </div>
           ) : (
             notificaciones
-            .filter(notif => activeTab !== 'no-leidas' || !notif.leida)
+            .filter(notif => {
+              // filtro por pestaña
+              if (activeTab === 'no-leidas' && notif.leida) return false;
+
+              // filtro por búsqueda de notificaciones
+              const q = (notificationSearch || '').trim().toLowerCase();
+              if (!q) return true;
+
+              const titulo = (notif.titulo || '').toLowerCase();
+              const mensaje = (notif.mensaje || notif.contenido || '').toLowerCase();
+              const remitente = ((notif.remitente && (notif.remitente.nombre || notif.remitente.usuario)) || '').toString().toLowerCase();
+
+              if (titulo.includes(q) || mensaje.includes(q) || remitente.includes(q)) return true;
+              return false;
+            })
             .map((notificacion) => (
               <div 
                 key={notificacion.id_notificacion} 

@@ -211,6 +211,7 @@ const AmigosModule = () => {
           </div>
         </div>
         
+        {activeTab === 'buscar' && (
         <div className="search-bar">
           <div className="search-icon">🔍</div>
           <input 
@@ -227,6 +228,7 @@ const AmigosModule = () => {
             }}
           />
         </div>
+        )}
         
         <input 
           type="file" 
